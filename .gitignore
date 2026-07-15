@@ -21,7 +21,6 @@ CLAUDE.md
 **/.claude/
 
 # --- Sitio renderizado y artefactos de knitr/rmarkdown (salida) ---
-*.html
 *_files/
 *_cache/
 
