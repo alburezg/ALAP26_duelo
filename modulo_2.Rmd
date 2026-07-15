@@ -1,0 +1,303 @@
+### Módulo 2 · Laboratorio: estimación de parentesco con DemoKin {#modulo2}
+
+*A cargo de Diego Alburez-Gutierrez.*
+
+En este laboratorio aprenderemos a estimar las **redes de parentesco** de una
+persona promedio (a quien llamaremos *Focal*) usando el paquete **DemoKin**. Nos
+concentraremos en el modelo más completo que usaremos en el taller: el modelo
+**bisexual y variable en el tiempo**, con salida por **período**. Este es
+exactamente el modelo que sustenta las estimaciones de duelo del Módulo 3.
+
+```{r m2-libs, message=FALSE}
+library(tidyverse)
+library(DemoKin)
+library(arrow)
+```
+
+**Contenido de este módulo:**
+
+- [2.1 El modelo bisexual y variable en el tiempo](#m2-modelo)
+- [2.2 Preparación de los insumos](#m2-insumos)
+- [2.3 Estimación con `kin2sex()`](#m2-kin2sex)
+- [2.4 Número de parientes vivos por edad de Focal](#m2-vivos)
+- [2.5 Distribución por edad de los parientes](#m2-distribucion)
+- [2.6 DemoKin no acepta combinar cohorte y período](#m2-error)
+
+#### 2.1 El modelo bisexual y variable en el tiempo {#m2-modelo}
+
+La idea central de los modelos matriciales de parentesco [@caswell_formal_2019]
+es una **recurrencia**: el número esperado de parientes de un tipo dado que tiene
+Focal a la edad $x+1$ se obtiene proyectando a los parientes que tenía a la edad
+$x$ (que sobreviven y envejecen) y sumando los **nuevos** parientes que "nacen"
+en el intervalo:
+
+$$
+\mathbf{k}_{x+1} = \mathbf{U}\,\mathbf{k}_{x} + \boldsymbol{\beta}_{x}
+$$
+
+donde $\mathbf{k}_x$ es la distribución por edad de un tipo de pariente,
+$\mathbf{U}$ contiene las probabilidades de supervivencia y
+$\boldsymbol{\beta}_x$ representa el "reclutamiento" de nuevos parientes a través
+de la reproducción de otros parientes.
+
+Este taller usa dos extensiones de ese modelo básico:
+
+- **Variable en el tiempo** [@caswell_formal_2021]: las tasas de fecundidad y
+  mortalidad **cambian con el año calendario**. Esto es crucial en América
+  Latina, donde la fecundidad cayó drásticamente desde 1960.
+- **Bisexual** [@caswell_formal_2022]: se rastrean parientes de **ambos sexos**
+  (madres y padres, hermanas y hermanos, etc.), integrando la demografía
+  femenina y masculina.
+
+> **Período vs. cohorte.** Con tasas variables en el tiempo hay dos formas de
+> mirar el parentesco:
+>
+> - **Período**: en un año calendario dado (p. ej., 2018), ¿cómo es la red de
+>   parientes de las personas de cada edad? (mirada transversal).
+> - **Cohorte**: para las personas nacidas en un año dado, ¿cómo evoluciona su
+>   red a lo largo de la vida? (mirada longitudinal).
+>
+> En el Módulo 3 necesitamos la mirada **por período** (`output_period`), porque
+> estimamos el duelo de toda la población en cada año.
+
+#### 2.2 Preparación de los insumos {#m2-insumos}
+
+`kin2sex()` necesita seis insumos, cada uno como una **matriz** con las **edades
+en las filas** (0–100) y los **años en las columnas**:
+
+| Insumo | Significado |
+|---|---|
+| `pf`, `pm` | probabilidades de supervivencia (mujeres, hombres) |
+| `ff`, `fm` | tasas de fecundidad por edad (mujeres, hombres) |
+| `nf`, `nm` | población por edad (mujeres, hombres) |
+
+Cargamos los datos del WPP para Colombia que preparamos en el Módulo 1:
+
+```{r m2-load}
+col <- read_parquet("data/wpp_latam/wpp_COL.parquet")
+head(col)
+```
+
+**Explorar los insumos.** Antes de correr el modelo conviene mirar las tasas que
+lo alimentan. Empecemos por la **mortalidad**: la probabilidad de muerte $q_x$
+por edad, con una línea por año (escala logarítmica). Se aprecia la caída de la
+mortalidad a lo largo del tiempo, sobre todo en la infancia:
+
+```{r m2-plot-qx, fig.height=4}
+col %>%
+  filter(sex == "f") %>%
+  ggplot(aes(x = age, y = qx, colour = year, group = year)) +
+  geom_line(alpha = 0.6) +
+  scale_y_log10() +
+  scale_colour_viridis_c() +
+  labs(
+    title = "Mortalidad femenina: qx por edad y año (Colombia)",
+    x = "Edad", y = "qx (escala log)", colour = "Año"
+  ) +
+  theme_bw()
+```
+
+La **fecundidad** por edad, con una línea por año. La curva se desplaza y baja:
+la fecundidad cae fuertemente desde los años 1960, un hecho central para el
+parentesco en América Latina:
+
+```{r m2-plot-fx, fig.height=4}
+col %>%
+  filter(sex == "f", fx > 0) %>%
+  ggplot(aes(x = age, y = fx, colour = year, group = year)) +
+  geom_line(alpha = 0.6) +
+  scale_colour_viridis_c() +
+  labs(
+    title = "Fecundidad por edad y año (Colombia)",
+    x = "Edad de la madre", y = "fx", colour = "Año"
+  ) +
+  theme_bw()
+```
+
+También podemos ver las tasas como **superficies de Lexis** (edad × año), que es
+la forma natural de pensar insumos que varían por edad, período y cohorte (APC):
+
+```{r m2-plot-lexis, fig.height=4}
+col %>%
+  filter(sex == "f") %>%
+  ggplot(aes(x = year, y = age, fill = fx)) +
+  geom_tile() +
+  scale_fill_viridis_c(option = "magma") +
+  labs(
+    title = "Superficie de fecundidad (edad × año), Colombia",
+    x = "Año", y = "Edad de la madre", fill = "fx"
+  ) +
+  theme_bw()
+```
+
+El modelo variable en el tiempo aprovecha justamente esta estructura
+Edad-Periodo-Cohorte: una persona y sus parientes atraviesan diferentes tasas a
+lo largo de su vida (una **diagonal** en el diagrama de Lexis).
+
+![Dimensiones Edad-Periodo-Cohorte del modelo de parentesco. Fuente: Caswell (2019).](apc.png)
+
+Los datos están en formato *tidy* (una fila por edad-sexo-año). La siguiente
+función auxiliar los convierte al formato **matriz** (edad × año) que espera
+DemoKin:
+
+```{r m2-reshape}
+reshape_wpp <- function(dat, variable, which_sex) {
+  dat %>%
+    filter(sex == which_sex) %>%
+    select(age, year, value = all_of(variable)) %>%
+    arrange(age, year) %>%
+    pivot_wider(names_from = year, values_from = value) %>%
+    select(-age) %>%
+    as.matrix()
+}
+
+# Supervivencia por sexo
+pf <- reshape_wpp(col, "px", "f")
+pm <- reshape_wpp(col, "px", "m")
+
+# Fecundidad femenina
+ff <- reshape_wpp(col, "fx", "f")
+
+# Población por sexo
+nf <- reshape_wpp(col, "pop", "f")
+nm <- reshape_wpp(col, "pop", "m")
+
+dim(pf) # 101 edades x 74 años
+pf[1:4, 1:5] # primeras edades y años
+```
+
+**Fecundidad masculina.** El WPP solo publica fecundidad femenina. Adoptamos el
+**supuesto androgino**: la fecundidad masculina es igual a la femenina
+(`fm = ff`). Es una simplificación razonable para fines didácticos; existen
+métodos para desplazar la fecundidad masculina según la edad media a la
+paternidad, pero no los usaremos aquí.
+
+```{r m2-fm}
+fm <- ff
+```
+
+#### 2.3 Estimación con `kin2sex()` {#m2-kin2sex}
+
+Ejecutamos el modelo bisexual variable en el tiempo pidiendo la salida por
+**período** para el año **2018**. Con `output_kin` elegimos los tipos de
+pariente de interés: hijas/os (`d`), madres/padres (`m`), abuelas/os (`gm`),
+hermanas/os (`s`), primas/os (`c`) y tías/os (`a`).
+
+> **Tiempo de cómputo.** Este modelo proyecta toda la serie 1950–2023 para ambos
+> sexos, por lo que puede tardar **varios minutos**. Para no repetir el cálculo
+> cada vez, lo guardamos la primera vez y lo reutilizamos después: si el archivo
+> ya existe, simplemente lo leemos.
+
+```{r m2-run}
+archivo_modelo <- "data/kin_col_2018.rds"
+
+if (!file.exists(archivo_modelo)) {
+  col_2sex <- kin2sex(
+    pf = pf, pm = pm,
+    ff = ff, fm = fm,
+    nf = nf, nm = nm,
+    time_invariant = FALSE,
+    output_period = 2018,
+    output_kin = c("d", "m", "gm", "s", "c", "a"),
+    sex_focal = "f",
+    birth_female = 0.5
+  )
+  saveRDS(col_2sex, archivo_modelo)
+}
+
+col_2sex <- readRDS(archivo_modelo)
+```
+
+`kin2sex()` devuelve una lista con dos data frames:
+
+- `kin_full`: el detalle por edad de Focal **y** edad del pariente;
+- `kin_summary`: un resumen por edad de Focal (número de parientes vivos,
+  edad media, etc.).
+
+```{r m2-summary}
+col_2sex$kin_summary %>%
+  filter(age_focal == 50) %>%
+  head()
+```
+
+La columna adicional `sex_kin` (`"f"`/`"m"`) distingue el sexo del pariente:
+`kin = "d"`, `sex_kin = "m"` son los **hijos** de Focal; `kin = "m"`,
+`sex_kin = "m"` es el **padre**, etc.
+
+#### 2.4 Número de parientes vivos por edad de Focal {#m2-vivos}
+
+Graficamos cuántos parientes de cada tipo y sexo tiene una mujer colombiana
+promedio a cada edad, según las tasas de 2018. La función `rename_kin()` de
+DemoKin traduce los códigos a etiquetas legibles.
+
+```{r m2-plot-vivos, fig.height=6}
+col_2sex$kin_summary %>%
+  rename_kin(sex = "2sex") %>%
+  ggplot(aes(x = age_focal, y = count_living, colour = sex_kin)) +
+  geom_line(linewidth = 1) +
+  facet_wrap(~kin_label, scales = "free_y") +
+  labs(
+    title = "Parientes vivos de una mujer colombiana (período 2018)",
+    x = "Edad de Focal",
+    y = "Número esperado de parientes vivos",
+    colour = "Sexo del pariente"
+  ) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
+
+Podemos verlo también como **composición** de la familia a lo largo de la vida.
+Aquí sumamos los parientes de ambos sexos (`sex_kin`) para obtener el total por
+tipo de pariente a cada edad de Focal:
+
+```{r m2-plot-area, fig.height=5}
+col_2sex$kin_summary %>%
+  rename_kin(sex = "2sex") %>%
+  summarise(count_living = sum(count_living), .by = c(age_focal, kin_label)) %>%
+  ggplot(aes(x = age_focal, y = count_living, fill = kin_label)) +
+  geom_area(colour = "black", linewidth = 0.2, alpha = 0.85) +
+  labs(
+    title = "Composición de la red de parientes vivos (período 2018)",
+    x = "Edad de Focal", y = "Número esperado de parientes vivos",
+    fill = "Tipo de pariente"
+  ) +
+  theme_bw()
+```
+
+#### 2.5 Distribución por edad de los parientes {#m2-distribucion}
+
+El objeto `kin_full` guarda la **distribución por edad** de cada tipo de
+pariente. Por ejemplo, las edades de las hijas e hijos de una Focal de 60 años:
+
+```{r m2-plot-dist}
+col_2sex$kin_full %>%
+  rename_kin(sex = "2sex") %>%
+  filter(age_focal == 60, kin == "d") %>%
+  ggplot(aes(x = age_kin, y = living, colour = sex_kin)) +
+  geom_line(linewidth = 1) +
+  labs(
+    title = "Distribución por edad de hijas/os de una Focal de 60 años (2018)",
+    x = "Edad del pariente", y = "Número esperado", colour = "Sexo del pariente"
+  ) +
+  theme_bw()
+```
+
+#### 2.6 DemoKin no acepta combinar cohorte y período {#m2-error}
+
+`kin2sex()` produce **o** una salida por cohorte (`output_cohort`) **o** una por
+período (`output_period`), pero **no ambas a la vez**. Intentarlo produce un
+error:
+
+```{r m2-error, error=TRUE}
+kin2sex(
+  pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
+  time_invariant = FALSE,
+  output_cohort = 1960,
+  output_period = 2018,
+  sex_focal = "f", birth_female = 0.5
+)
+```
+
+Con esto tenemos todo lo necesario para el Módulo 3, donde combinaremos estas
+estructuras de parentesco con las muertes por el conflicto para estimar el
+**duelo a nivel poblacional**.

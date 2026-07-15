@@ -1,0 +1,163 @@
+### Módulo 4 · Ejercicios: replicar el análisis para otro país {#modulo4}
+
+*A cargo de todo el equipo.*
+
+En este laboratorio pondrá en práctica todo lo aprendido. La tarea es **elegir un
+país** de América Latina o el Caribe y **replicar las cuatro medidas** del
+Módulo 3 (incidencia anual, multiplicadores, prevalencia acumulada y su
+distribución por edad), pero para la **mortalidad violenta** de ese país.
+
+El flujo de trabajo es el mismo del Módulo 3, con dos cambios:
+
+1. Los insumos del modelo de parentesco salen de los datos del **WPP** que
+   preparamos (un país a elección), no de los datos especiales de Colombia.
+2. La mortalidad de referencia son **tasas específicas por homicidio** del país
+   elegido.
+
+> **Datos de mortalidad por homicidio.** El archivo con las tasas de mortalidad
+> por homicidio específicas por país todavía no está disponible; se distribuirá
+> más adelante. **Mientras tanto, usaremos la mortalidad de todas las causas del
+> WPP como marcador de posición (*placeholder*)**, de modo que todo el código
+> pueda ejecutarse de principio a fin. Cuando lleguen las tasas por homicidio,
+> solo habrá que reemplazar ese insumo.
+
+```{r m4-libs, message=FALSE}
+library(tidyverse)
+library(DemoKin)
+library(arrow)
+```
+
+**Contenido de este módulo:**
+
+- [4.1 Elegir un país y preparar los insumos](#m4-pais)
+- [4.2 Las tasas de mortalidad por homicidio](#m4-mortalidad)
+- [4.3 Generar la estructura de parentesco del país](#m4-kinship)
+- [4.4 Ejercicio: replicar las cuatro medidas](#m4-ejercicio)
+
+#### 4.1 Elegir un país y preparar los insumos {#m4-pais}
+
+Elegimos un país mediante su código ISO3 (véase `data/countries.csv`). Aquí
+usamos **Guatemala** (`GTM`) como ejemplo; cambie el código por el país que
+prefiera.
+
+```{r m4-load}
+iso <- "GTM" # <-- cambie aquí su país
+pais <- read_parquet(file.path("data/wpp_latam", paste0("wpp_", iso, ".parquet")))
+glimpse(pais)
+```
+
+Reutilizamos la función del Módulo 2 para construir las matrices (edad × año):
+
+```{r m4-reshape}
+reshape_wpp <- function(dat, variable, which_sex) {
+  dat %>%
+    filter(sex == which_sex) %>%
+    select(age, year, value = all_of(variable)) %>%
+    arrange(age, year) %>%
+    pivot_wider(names_from = year, values_from = value) %>%
+    select(-age) %>%
+    as.matrix()
+}
+
+pf <- reshape_wpp(pais, "px", "f")
+pm <- reshape_wpp(pais, "px", "m")
+ff <- reshape_wpp(pais, "fx", "f")
+fm <- ff # supuesto androgino
+nf <- reshape_wpp(pais, "pop", "f")
+nm <- reshape_wpp(pais, "pop", "m")
+```
+
+#### 4.2 Las tasas de mortalidad por homicidio {#m4-mortalidad}
+
+En el Módulo 3, la probabilidad de muerte de un pariente venía de las **muertes
+por homicidio** del conflicto colombiano. Para el ejercicio usamos un archivo de
+**tasas de mortalidad por homicidio** por país, año, sexo y edad:
+`data/homicide_mortality_rates.csv` (columnas `iso3`, `year`, `sex`, `age`, `mx`).
+
+> **Marcador de posición.** El archivo definitivo de tasas por homicidio aún no
+> está disponible. Por ahora, `homicide_mortality_rates.csv` contiene un **marcador
+> de posición**: la mortalidad por **todas las causas** del WPP. Tiene la misma
+> estructura y nombre que tendrá el archivo real, de modo que **cuando lleguen las
+> tasas por homicidio solo se reemplaza este archivo y el código no cambia**. (Ojo:
+> con mortalidad por todas las causas los resultados reflejan el duelo *total*, no
+> solo el violento.)
+
+Leemos el archivo, lo filtramos para el país elegido y convertimos la tasa `mx`
+en probabilidad `qx`:
+
+```{r m4-mort}
+qx_kin <- read_csv("data/homicide_mortality_rates.csv", show_col_types = FALSE) %>%
+  filter(iso3 == iso) %>%
+  mutate(qx = mx / (1 + 0.5 * mx)) %>%
+  transmute(year, sex_kin = sex, age_kin = age, qx_kin = qx)
+
+head(qx_kin)
+```
+
+#### 4.3 Generar la estructura de parentesco del país {#m4-kinship}
+
+Corremos el modelo de parentesco (como en los Módulos 2 y 3) para el país
+elegido, con salida por período y para ambos sexos de Focal.
+
+> **Atención:** este paso tarda **~15 minutos**. Igual que en el Módulo 2, lo
+> calculamos una sola vez y lo guardamos; si el archivo ya existe, solo lo
+> leemos.
+
+```{r m4-kin, eval=FALSE}
+archivo_kin <- file.path("data", paste0("kin_", iso, ".parquet"))
+
+if (!file.exists(archivo_kin)) {
+  # kin2sex corre para un sexo de Focal; lo llamamos para mujeres y hombres
+  kin_f <- kin2sex(
+    pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
+    time_invariant = FALSE,
+    output_period = 1990:2020,
+    output_kin = c("c", "d", "gd", "gm", "m", "n", "a", "s"),
+    sex_focal = "f"
+  )
+  kin_m <- kin2sex(
+    pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
+    time_invariant = FALSE,
+    output_period = 1990:2020,
+    output_kin = c("c", "d", "gd", "gm", "m", "n", "a", "s"),
+    sex_focal = "m"
+  )
+  kin <- bind_rows(
+    as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "f"),
+    as_tibble(kin_m$kin_full) %>% mutate(sex_focal = "m")
+  ) %>%
+    transmute(year, sex_focal, age_focal, kin, sex_kin, age_kin, living) %>%
+    filter(living > 0)
+  write_parquet(kin, archivo_kin)
+}
+
+kin <- read_parquet(archivo_kin)
+```
+
+#### 4.4 Ejercicio: replicar las cuatro medidas {#m4-ejercicio}
+
+<div class="ejercicio">
+
+**Su tarea.** Con la estructura de parentesco (`kin`), la mortalidad de
+referencia (`qx_kin`) y la población (`pais`), reproduzca para su país las
+**cuatro medidas** del Módulo 3:
+
+1. **Incidencia anual** del duelo (personas en duelo por año y tipo de pariente).
+2. **Multiplicadores de duelo** (personas en duelo por muerte).
+3. **Prevalencia acumulada** en el último año disponible (% de la población que
+   ha perdido al menos un pariente).
+4. **Distribución por edad** de la prevalencia (pirámide poblacional coloreada
+   por familia cercana / extendida / ambas).
+
+Puede reutilizar directamente el código del Módulo 3, adaptando los nombres de
+los objetos. Si se atasca, en la pestaña **Soluciones** (al final) encontrará el
+código completo y comentado del ejercicio, resuelto paso a paso para Costa Rica.
+
+</div>
+
+> **Preguntas para la discusión.**
+>
+> - ¿Cómo se compara el multiplicador de duelo de su país con el de Colombia?
+> - ¿Qué tipo de pariente aporta más al duelo total? ¿Por qué?
+> - ¿Cómo cambiarían los resultados al usar mortalidad por homicidio en lugar de
+>   mortalidad por todas las causas?

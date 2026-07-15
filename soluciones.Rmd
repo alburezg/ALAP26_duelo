@@ -1,0 +1,324 @@
+### Soluciones · ejercicio del Módulo 4 (resuelto para Costa Rica) {#soluciones}
+
+Esta pestaña resuelve, paso a paso y con código comentado, el ejercicio del
+Módulo 4 para **Costa Rica**, usando **solo datos del WPP** y el archivo de tasas
+de mortalidad por homicidio. Es la plantilla que puede adaptar a **su país**:
+basta con cambiar el código ISO3.
+
+> **Marcador de posición.** Costa Rica no tuvo un conflicto como el colombiano y
+> aún no disponemos de tasas de homicidio por edad. Por eso aquí usamos, como
+> sustituto, la **mortalidad por todas las causas** del WPP
+> (`data/homicide_mortality_rates.csv`). Los resultados reflejan entonces el
+> duelo por *toda* la mortalidad (no solo la violenta) y sirven para ilustrar el
+> mecanismo; cuando dispongamos de las tasas reales de homicidio, se reemplaza ese
+> archivo y el código no cambia.
+
+**Contenido:**
+
+- [S.1 Insumos y estructura de parentesco](#sol-insumos)
+- [S.2 Probabilidades de pérdida](#sol-probs)
+- [S.3 Medida 1: incidencia anual](#sol-incidencia)
+- [S.4 Medida 2: multiplicadores](#sol-multiplicadores)
+- [S.5 Medida 3: prevalencia acumulada](#sol-prevalencia)
+- [S.6 Medida 4: distribución por edad (pirámide)](#sol-piramide)
+
+```{r sol-libs, message=FALSE}
+library(tidyverse)
+library(arrow)
+library(DemoKin)
+```
+
+#### S.1 Insumos y estructura de parentesco {#sol-insumos}
+
+```{r sol-setup}
+iso <- "CRI" # <- cambie por su país
+anio_final <- 2020 # último año del análisis
+
+if (!dir.exists("data/wpp_latam")) {
+  dir.create("data/wpp_latam")
+  unzip("data/wpp_latam_1950_2023.zip", exdir = "data/wpp_latam")
+}
+
+# Datos WPP del país (supervivencia, fecundidad, población)
+pais <- read_parquet(file.path("data/wpp_latam", paste0("wpp_", iso, ".parquet")))
+
+# Población focal y exposición (sin ajuste por inmigrantes en este ejemplo)
+pop_focal <- pais %>% transmute(year, sex_focal = sex, age_focal = age, pop)
+exposicion <- pais %>%
+  filter(year == anio_final) %>%
+  transmute(sex_focal = sex, age_focal = age, exposicion = pop)
+poblacion <- sum(exposicion$exposicion)
+
+# Tasas de mortalidad por homicidio (marcador de posición = todas las causas).
+# Convertimos la tasa mx en probabilidad qx (ax = 0.5).
+qx_kin <- read_csv("data/homicide_mortality_rates.csv", show_col_types = FALSE) %>%
+  filter(iso3 == iso) %>%
+  mutate(qx = mx / (1 + 0.5 * mx)) %>%
+  transmute(year, sex_kin = sex, age_kin = age, qx_kin = qx)
+
+# Etiquetas y grupos de familia
+etiquetas_kin <- c(
+  m = "Madres y padres", d = "Hijas e hijos", s = "Hermanas y hermanos",
+  gm = "Abuelas y abuelos", gd = "Nietas y nietos", a = "Tías y tíos",
+  n = "Sobrinas y sobrinos", c = "Primas y primos"
+)
+parientes_cercanos <- c("d", "m", "s")
+parientes_extendidos <- c("gm", "gd", "a", "n", "c")
+```
+
+Corremos el modelo de parentesco para el país (`kin2sex` para Focal mujer y
+hombre). Tarda ~10 min; lo calculamos una vez, lo guardamos y lo reutilizamos.
+
+```{r sol-kin}
+reshape_wpp <- function(dat, variable, which_sex) {
+  dat %>%
+    filter(sex == which_sex) %>%
+    select(age, year, value = all_of(variable)) %>%
+    arrange(age, year) %>%
+    pivot_wider(names_from = year, values_from = value) %>%
+    select(-age) %>%
+    as.matrix()
+}
+
+archivo_kin <- file.path("data", paste0("kin_", iso, ".parquet"))
+
+if (!file.exists(archivo_kin)) {
+  pf <- reshape_wpp(pais, "px", "f")
+  pm <- reshape_wpp(pais, "px", "m")
+  ff <- reshape_wpp(pais, "fx", "f")
+  fm <- ff # supuesto androgino
+  nf <- reshape_wpp(pais, "pop", "f")
+  nm <- reshape_wpp(pais, "pop", "m")
+
+  kin_f <- kin2sex(
+    pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
+    time_invariant = FALSE, output_period = 1990:anio_final,
+    output_kin = c("c", "d", "gd", "gm", "m", "n", "a", "s"), sex_focal = "f"
+  )
+  kin_m <- kin2sex(
+    pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
+    time_invariant = FALSE, output_period = 1990:anio_final,
+    output_kin = c("c", "d", "gd", "gm", "m", "n", "a", "s"), sex_focal = "m"
+  )
+  kin <- bind_rows(
+    as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "f"),
+    as_tibble(kin_m$kin_full) %>% mutate(sex_focal = "m")
+  ) %>%
+    transmute(year, sex_focal, age_focal, kin, sex_kin, age_kin, living) %>%
+    filter(living >= 1e-6)
+  write_parquet(kin, archivo_kin)
+}
+
+kin <- read_parquet(archivo_kin)
+```
+
+#### S.2 Probabilidades de pérdida {#sol-probs}
+
+```{r sol-p0, cache=TRUE}
+# Paso 2: probabilidad anual de NO perder ningún pariente del tipo k
+p0_anual <- kin %>%
+  left_join(qx_kin, by = c("year", "sex_kin", "age_kin")) %>%
+  mutate(p0x = (1 - qx_kin)^living) %>%
+  summarise(p0 = prod(p0x, na.rm = TRUE), .by = c(year, sex_focal, age_focal, kin))
+
+# Paso 3: probabilidad acumulada (producto por cohorte); nos quedamos con anio_final
+p0_acum <- p0_anual %>%
+  group_by(sex_focal, cohorte = year - age_focal, kin) %>%
+  arrange(age_focal, .by_group = TRUE) %>%
+  mutate(p0_acum = cumprod(p0)) %>%
+  ungroup() %>%
+  filter(year == anio_final)
+```
+
+#### S.3 Medida 1: incidencia anual {#sol-incidencia}
+
+```{r sol-incidencia, fig.height=4.5}
+incidencia_familia_anual <- function(tipos, etiqueta) {
+  p0_anual %>%
+    filter(kin %in% tipos) %>%
+    summarise(p0 = prod(p0), .by = c(year, sex_focal, age_focal)) %>%
+    left_join(pop_focal, by = c("year", "sex_focal", "age_focal")) %>%
+    mutate(en_duelo = (1 - p0) * pop) %>%
+    summarise(en_duelo = sum(en_duelo), .by = year) %>%
+    mutate(grupo = etiqueta)
+}
+
+incidencia_familia <- bind_rows(
+  incidencia_familia_anual(parientes_cercanos, "Familia cercana"),
+  incidencia_familia_anual(parientes_extendidos, "Familia extendida")
+)
+
+incidencia_familia %>%
+  ggplot(aes(x = year, y = en_duelo / 1000, fill = grupo)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  scale_fill_manual(values = c(
+    "Familia cercana" = "#b56576", "Familia extendida" = "#355070"
+  )) +
+  labs(
+    title = paste0("Incidencia anual del duelo (", iso, ", marcador de posición)"),
+    x = "Año", y = "Personas en duelo (miles)", fill = "Grupo de familia"
+  ) +
+  theme_bw()
+```
+
+#### S.4 Medida 2: multiplicadores {#sol-multiplicadores}
+
+```{r sol-multiplicadores}
+# muertes totales del período (con las tasas placeholder = todas las causas)
+muertes_total <- read_csv("data/homicide_mortality_rates.csv", show_col_types = FALSE) %>%
+  filter(iso3 == iso, year %in% 1990:anio_final) %>%
+  left_join(pais %>% select(year, sex, age, pop), by = c("year", "sex", "age")) %>%
+  summarise(m = sum(mx * pop, na.rm = TRUE)) %>%
+  pull(m)
+
+incidencia_grupo <- function(tipos) {
+  p0_anual %>%
+    filter(kin %in% tipos) %>%
+    summarise(p0 = prod(p0), .by = c(year, sex_focal, age_focal)) %>%
+    left_join(pop_focal, by = c("year", "sex_focal", "age_focal")) %>%
+    mutate(en_duelo = (1 - p0) * pop) %>%
+    summarise(en_duelo = sum(en_duelo)) %>%
+    pull(en_duelo)
+}
+
+mult_kin <- p0_anual %>%
+  left_join(pop_focal, by = c("year", "sex_focal", "age_focal")) %>%
+  mutate(en_duelo = (1 - p0) * pop) %>%
+  summarise(personas = sum(en_duelo), .by = kin) %>%
+  mutate(kin = recode(kin, !!!etiquetas_kin))
+
+mult_grupos <- tibble(
+  kin = c("Familia cercana", "Familia extendida", "Cercana o extendida"),
+  personas = c(
+    incidencia_grupo(parientes_cercanos),
+    incidencia_grupo(parientes_extendidos),
+    incidencia_grupo(names(etiquetas_kin))
+  )
+)
+
+bind_rows(mult_kin, mult_grupos) %>%
+  transmute(
+    Pariente = kin,
+    `Personas en duelo (incidencia)` = round(personas),
+    `Muertes` = round(muertes_total),
+    Multiplicador = round(personas / muertes_total, 1)
+  ) %>%
+  knitr::kable(format.args = list(big.mark = ","))
+```
+
+#### S.5 Medida 3: prevalencia acumulada {#sol-prevalencia}
+
+```{r sol-prevalencia, fig.height=5}
+en_duelo_prev <- function(tipos) {
+  p0_acum %>%
+    filter(kin %in% tipos) %>%
+    summarise(p0_acum = prod(p0_acum), .by = c(sex_focal, age_focal)) %>%
+    left_join(exposicion, by = c("sex_focal", "age_focal")) %>%
+    mutate(b = (1 - p0_acum) * exposicion) %>%
+    summarise(personas = sum(b)) %>%
+    pull(personas)
+}
+
+prev_kin <- tibble(kin = names(etiquetas_kin)) %>%
+  mutate(
+    personas = map_dbl(kin, en_duelo_prev),
+    etiqueta = recode(kin, !!!etiquetas_kin),
+    grupo = if_else(kin %in% parientes_cercanos, "Cercana", "Extendida")
+  )
+prev_grupos <- tibble(
+  etiqueta = c("Familia cercana", "Familia extendida", "Cercana o extendida"),
+  personas = c(
+    en_duelo_prev(parientes_cercanos),
+    en_duelo_prev(parientes_extendidos),
+    en_duelo_prev(names(etiquetas_kin))
+  ),
+  grupo = "Grupo"
+)
+prevalencia <- bind_rows(prev_kin %>% select(etiqueta, personas, grupo), prev_grupos) %>%
+  mutate(millones = personas / 1e6, pct = 100 * personas / poblacion)
+
+orden_individual <- c(
+  "Hijas e hijos", "Madres y padres", "Hermanas y hermanos",
+  "Abuelas y abuelos", "Sobrinas y sobrinos", "Nietas y nietos",
+  "Primas y primos", "Tías y tíos"
+)
+orden_grupo <- c("Familia cercana", "Familia extendida", "Cercana o extendida")
+
+prevalencia %>%
+  mutate(
+    panel = if_else(grupo == "Grupo", "Grupos de familia", "Parientes individuales"),
+    panel = factor(panel, levels = c("Parientes individuales", "Grupos de familia")),
+    etiqueta = factor(etiqueta, levels = rev(c(orden_individual, orden_grupo)))
+  ) %>%
+  ggplot(aes(x = etiqueta, y = millones, fill = grupo)) +
+  geom_col() +
+  geom_text(aes(label = sprintf("%.1f M (%.0f%%)", millones, pct)), hjust = -0.1, size = 3) +
+  coord_flip() +
+  facet_grid(panel ~ ., scales = "free_y", space = "free_y") +
+  scale_fill_manual(values = c(
+    "Cercana" = "#b56576", "Extendida" = "#355070", "Grupo" = "grey55"
+  )) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.25))) +
+  labs(
+    title = paste0("Prevalencia acumulada del duelo en ", anio_final, " (", iso, ")"),
+    x = NULL, y = "Personas en duelo (millones)", fill = "Grupo"
+  ) +
+  theme_bw()
+```
+
+#### S.6 Medida 4: distribución por edad (pirámide) {#sol-piramide}
+
+```{r sol-piramide, fig.height=6}
+pop_final <- pais %>%
+  filter(year == anio_final) %>%
+  transmute(sex_focal = sex, age_focal = age, pop)
+
+p0_grupo <- function(tipos) {
+  p0_acum %>%
+    filter(kin %in% tipos) %>%
+    summarise(p0 = prod(p0_acum), .by = c(sex_focal, age_focal))
+}
+pC <- p0_grupo(parientes_cercanos) %>% rename(p0_C = p0)
+pD <- p0_grupo(parientes_extendidos) %>% rename(p0_D = p0)
+
+piramide <- pC %>%
+  left_join(pD, by = c("sex_focal", "age_focal")) %>%
+  left_join(pop_final, by = c("sex_focal", "age_focal")) %>%
+  mutate(
+    `No en duelo` = p0_C * p0_D * pop,
+    `Solo familia cercana` = (1 - p0_C) * p0_D * pop,
+    `Solo familia extendida` = p0_C * (1 - p0_D) * pop,
+    `Familia cercana y extendida` = (1 - p0_C) * (1 - p0_D) * pop
+  ) %>%
+  pivot_longer(c(
+    `No en duelo`, `Solo familia cercana`,
+    `Solo familia extendida`, `Familia cercana y extendida`
+  ), names_to = "categoria", values_to = "personas") %>%
+  mutate(
+    categoria = factor(categoria, levels = c(
+      "No en duelo", "Solo familia extendida",
+      "Familia cercana y extendida", "Solo familia cercana"
+    )),
+    personas = ifelse(sex_focal == "f", -personas, personas) / 1000
+  )
+
+piramide %>%
+  ggplot(aes(x = age_focal, y = personas, fill = categoria)) +
+  geom_col(width = 1) +
+  geom_hline(yintercept = 0, linewidth = 0.2) +
+  coord_flip() +
+  scale_fill_manual(values = c(
+    "No en duelo" = "grey75",
+    "Solo familia extendida" = "#355070",
+    "Familia cercana y extendida" = "#eaac8b",
+    "Solo familia cercana" = "#b56576"
+  )) +
+  scale_y_continuous(labels = function(x) scales::comma(abs(x))) +
+  labs(
+    title = paste0("Población de ", iso, " en ", anio_final, " según duelo"),
+    subtitle = "Mujeres a la izquierda, hombres a la derecha",
+    x = "Edad", y = "Población (miles)", fill = "Situación de duelo"
+  ) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```

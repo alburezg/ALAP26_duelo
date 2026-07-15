@@ -1,0 +1,63 @@
+# =============================================================================
+# .gitignore
+# Se versionan SOLO los archivos de ENTRADA y el CÓDIGO necesario para
+# reproducir el taller (index.Rmd, modulo_*.Rmd, prep/*.R, functions_rates.R,
+# socsim_Colombia.sup, kinship.bib, styles.css, README.md y los datos de
+# entrada en data/). Todo lo que se GENERA al ejecutar el código queda excluido.
+# =============================================================================
+
+# --- R / RStudio ---
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.Rapp.history
+*.Rproj
+
+# --- Claude / herramientas de IA (no versionar ninguna evidencia de uso) ---
+.claude/
+.claude*
+CLAUDE.md
+**/.claude/
+
+# --- Sitio renderizado y artefactos de knitr/rmarkdown (salida) ---
+*.html
+*_files/
+*_cache/
+
+# --- Materiales de referencia (PDFs/Word grandes; no forman parte del sitio) ---
+_ref/
+
+# --- Datos crudos del WPP (demasiado grandes; se descargan aparte) ---
+data/wpp2024_raw/
+*.csv.gz
+
+# --- Carpeta descomprimida del WPP (se genera al descomprimir el .zip) ---
+data/wpp_latam/
+
+# --- Salidas intermedias del modelo de parentesco (Módulos 2, 3 y 4) ---
+# Se regeneran ejecutando los laboratorios o prep/03_build_kinship_colombia.R.
+data/colombia/col_kin_1985_2018.parquet
+data/kin_*.rds
+data/kin_*.parquet
+
+# --- Artefactos de la microsimulación SOCSIM (Módulos 5-6) ---
+rates/
+sim_results_*/            # carpeta de salida que crea SOCSIM
+presim.opop
+presim.omar
+*.opop
+*.omar
+*.opox
+*.otx
+*.pyr
+*.pop
+*.omor
+*.log
+socsim_Colombia.sup.*
+data/socsim_*.rds
+
+# --- Sistema ---
+.DS_Store
+Thumbs.db
+desktop.ini

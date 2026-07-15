@@ -1,0 +1,400 @@
+***************************************************************************
+* Supervisory file for SOCSIM microsimulation for Colombia, 1950-2023
+* Created on 23.10.2024
+***************************************************************************
+* This simulation uses as input age-specific fertility rates and
+* age-specific probabilities of death (qx)  
+* retrieved from the World Population Prospects 2024 
+* converted into SOCSIM format.
+***************************************************************************
+
+segments  75
+input_file presim
+
+marriage_after_childbirth 1 
+marriage_eval distribution
+marriage_queues 1
+hetfert 0
+bint 12
+
+***********************************************************************
+* Pre-simulation (100 years) to get stable population at 31-12-1949
+* Using WPP rates for 1950
+
+duration 1200
+include rates/Colombiafert1950
+include rates/Colombiamort1950
+run
+
+* First simulation with actual fertility and mortality rates. 
+* Give population at 31-12-1950
+
+duration 12
+include rates/Colombiafert1950
+include rates/Colombiamort1950
+run
+
+duration 12
+include rates/Colombiafert1951
+include rates/Colombiamort1951
+run
+
+duration 12
+include rates/Colombiafert1952
+include rates/Colombiamort1952
+run
+
+duration 12
+include rates/Colombiafert1953
+include rates/Colombiamort1953
+run
+
+duration 12
+include rates/Colombiafert1954
+include rates/Colombiamort1954
+run
+
+duration 12
+include rates/Colombiafert1955
+include rates/Colombiamort1955
+run
+
+duration 12
+include rates/Colombiafert1956
+include rates/Colombiamort1956
+run
+
+duration 12
+include rates/Colombiafert1957
+include rates/Colombiamort1957
+run
+
+duration 12
+include rates/Colombiafert1958
+include rates/Colombiamort1958
+run
+
+duration 12
+include rates/Colombiafert1959
+include rates/Colombiamort1959
+run
+
+duration 12
+include rates/Colombiafert1960
+include rates/Colombiamort1960
+run
+
+duration 12
+include rates/Colombiafert1961
+include rates/Colombiamort1961
+run
+
+duration 12
+include rates/Colombiafert1962
+include rates/Colombiamort1962
+run
+
+duration 12
+include rates/Colombiafert1963
+include rates/Colombiamort1963
+run
+
+duration 12
+include rates/Colombiafert1964
+include rates/Colombiamort1964
+run
+
+duration 12
+include rates/Colombiafert1965
+include rates/Colombiamort1965
+run
+
+duration 12
+include rates/Colombiafert1966
+include rates/Colombiamort1966
+run
+
+duration 12
+include rates/Colombiafert1967
+include rates/Colombiamort1967
+run
+
+duration 12
+include rates/Colombiafert1968
+include rates/Colombiamort1968
+run
+
+duration 12
+include rates/Colombiafert1969
+include rates/Colombiamort1969
+run
+
+duration 12
+include rates/Colombiafert1970
+include rates/Colombiamort1970
+run
+
+duration 12
+include rates/Colombiafert1971
+include rates/Colombiamort1971
+run
+
+duration 12
+include rates/Colombiafert1972
+include rates/Colombiamort1972
+run
+
+duration 12
+include rates/Colombiafert1973
+include rates/Colombiamort1973
+run
+
+duration 12
+include rates/Colombiafert1974
+include rates/Colombiamort1974
+run
+
+duration 12
+include rates/Colombiafert1975
+include rates/Colombiamort1975
+run
+
+duration 12
+include rates/Colombiafert1976
+include rates/Colombiamort1976
+run
+
+duration 12
+include rates/Colombiafert1977
+include rates/Colombiamort1977
+run
+
+duration 12
+include rates/Colombiafert1978
+include rates/Colombiamort1978
+run
+
+duration 12
+include rates/Colombiafert1979
+include rates/Colombiamort1979
+run
+
+duration 12
+include rates/Colombiafert1980
+include rates/Colombiamort1980
+run
+
+duration 12
+include rates/Colombiafert1981
+include rates/Colombiamort1981
+run
+
+duration 12
+include rates/Colombiafert1982
+include rates/Colombiamort1982
+run
+
+duration 12
+include rates/Colombiafert1983
+include rates/Colombiamort1983
+run
+
+duration 12
+include rates/Colombiafert1984
+include rates/Colombiamort1984
+run
+
+duration 12
+include rates/Colombiafert1985
+include rates/Colombiamort1985
+run
+
+duration 12
+include rates/Colombiafert1986
+include rates/Colombiamort1986
+run
+
+duration 12
+include rates/Colombiafert1987
+include rates/Colombiamort1987
+run
+
+duration 12
+include rates/Colombiafert1988
+include rates/Colombiamort1988
+run
+
+duration 12
+include rates/Colombiafert1989
+include rates/Colombiamort1989
+run
+
+duration 12
+include rates/Colombiafert1990
+include rates/Colombiamort1990
+run
+
+duration 12
+include rates/Colombiafert1991
+include rates/Colombiamort1991
+run
+
+duration 12
+include rates/Colombiafert1992
+include rates/Colombiamort1992
+run
+
+duration 12
+include rates/Colombiafert1993
+include rates/Colombiamort1993
+run
+
+duration 12
+include rates/Colombiafert1994
+include rates/Colombiamort1994
+run
+
+duration 12
+include rates/Colombiafert1995
+include rates/Colombiamort1995
+run
+
+duration 12
+include rates/Colombiafert1996
+include rates/Colombiamort1996
+run
+
+duration 12
+include rates/Colombiafert1997
+include rates/Colombiamort1997
+run
+
+duration 12
+include rates/Colombiafert1998
+include rates/Colombiamort1998
+run
+
+duration 12
+include rates/Colombiafert1999
+include rates/Colombiamort1999
+run
+
+duration 12
+include rates/Colombiafert2000
+include rates/Colombiamort2000
+run
+
+duration 12
+include rates/Colombiafert2001
+include rates/Colombiamort2001
+run
+
+duration 12
+include rates/Colombiafert2002
+include rates/Colombiamort2002
+run
+
+duration 12
+include rates/Colombiafert2003
+include rates/Colombiamort2003
+run
+
+duration 12
+include rates/Colombiafert2004
+include rates/Colombiamort2004
+run
+
+duration 12
+include rates/Colombiafert2005
+include rates/Colombiamort2005
+run
+
+duration 12
+include rates/Colombiafert2006
+include rates/Colombiamort2006
+run
+
+duration 12
+include rates/Colombiafert2007
+include rates/Colombiamort2007
+run
+
+duration 12
+include rates/Colombiafert2008
+include rates/Colombiamort2008
+run
+
+duration 12
+include rates/Colombiafert2009
+include rates/Colombiamort2009
+run
+
+duration 12
+include rates/Colombiafert2010
+include rates/Colombiamort2010
+run
+
+duration 12
+include rates/Colombiafert2011
+include rates/Colombiamort2011
+run
+
+duration 12
+include rates/Colombiafert2012
+include rates/Colombiamort2012
+run
+
+duration 12
+include rates/Colombiafert2013
+include rates/Colombiamort2013
+run
+
+duration 12
+include rates/Colombiafert2014
+include rates/Colombiamort2014
+run
+
+duration 12
+include rates/Colombiafert2015
+include rates/Colombiamort2015
+run
+
+duration 12
+include rates/Colombiafert2016
+include rates/Colombiamort2016
+run
+
+duration 12
+include rates/Colombiafert2017
+include rates/Colombiamort2017
+run
+
+duration 12
+include rates/Colombiafert2018
+include rates/Colombiamort2018
+run
+
+duration 12
+include rates/Colombiafert2019
+include rates/Colombiamort2019
+run
+
+duration 12
+include rates/Colombiafert2020
+include rates/Colombiamort2020
+run
+
+duration 12
+include rates/Colombiafert2021
+include rates/Colombiamort2021
+run
+
+duration 12
+include rates/Colombiafert2022
+include rates/Colombiamort2022
+run
+
+duration 12
+include rates/Colombiafert2023
+include rates/Colombiamort2023
+run

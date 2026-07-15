@@ -1,0 +1,233 @@
+### Módulo 5 · Laboratorio: microsimulación con SOCSIM {#modulo5}
+
+*A cargo de Liliana Calderón.* (Adaptado del taller de la Escuela ALAP 2024.)
+
+Hasta ahora estimamos el parentesco con modelos **analíticos** (DemoKin). En este
+módulo lo hacemos con **microsimulación**: en lugar de calcular valores esperados
+con matrices, simulamos individuo por individuo una población completa —con sus
+nacimientos, muertes y matrimonios— y luego reconstruimos las redes de parentesco
+a partir de la genealogía resultante. Usamos el paquete
+[`rsocsim`](https://mpidr.github.io/rsocsim/), la interfaz en R del
+microsimulador **SOCSIM** [@hammel_socsim_1976; @mason2016socsim].
+
+```{r m5-libs, message=FALSE}
+library(rsocsim)
+library(tidyverse)
+library(ggh4x) # facetas con escalas independientes
+library(data.table)
+library(arrow)
+```
+
+**Contenido de este módulo:**
+
+- [5.1 Instalación](#m5-instalacion)
+- [5.2 ¿Qué es SOCSIM?](#m5-socsim)
+- [5.3 Escribir los archivos de tasas de entrada](#m5-tasas)
+- [5.4 Población inicial](#m5-poblacion)
+- [5.5 Correr la simulación](#m5-correr)
+- [5.6 Estimar las tasas a partir de la simulación](#m5-estimar)
+- [5.7 Comparar SOCSIM con el WPP](#m5-comparar)
+
+#### 5.1 Instalación {#m5-instalacion}
+
+Instala la versión de desarrollo de `rsocsim` desde GitHub. Si ya lo tenías,
+desinstálalo y vuelve a instalarlo para asegurar la versión correcta.
+
+```{r m5-install, eval=FALSE}
+# remove.packages("rsocsim")
+remotes::install_github("MPIDR/rsocsim", ref = "v1.5.9")
+```
+
+#### 5.2 ¿Qué es SOCSIM? {#m5-socsim}
+
+SOCSIM toma como insumos una **población inicial** y **tasas mensuales** de
+fecundidad y mortalidad por edad y sexo. Cada mes, cada individuo está en riesgo
+de experimentar eventos (nacimiento, muerte, matrimonio); el momento de cada
+evento se sortea estocásticamente mediante un modelo de riesgos competitivos. Al
+final se obtiene un archivo de **población** (`.opop`), con un registro por cada
+individuo que vivió en la simulación (incluyendo los identificadores de su madre,
+padre y cónyuge), y un archivo de **matrimonios** (`.omar`). Con esa genealogía
+sintética podemos estudiar la disponibilidad y la pérdida de parientes.
+
+Haremos una microsimulación para **Colombia, 1950–2023**, usando como insumos las
+mismas tasas del WPP 2024 que preparamos para los modelos de DemoKin.
+
+#### 5.3 Escribir los archivos de tasas de entrada {#m5-tasas}
+
+SOCSIM necesita las tasas en un formato de texto propio. Las funciones auxiliares
+en `functions_rates.R` convierten nuestros datos del WPP (los `.parquet` por país)
+a ese formato y las guardan en la carpeta `rates/`.
+
+```{r m5-unzip}
+# Asegurar que los datos del WPP estén descomprimidos (véase el Módulo 1)
+if (!dir.exists("data/wpp_latam")) {
+  dir.create("data/wpp_latam")
+  unzip("data/wpp_latam_1950_2023.zip", exdir = "data/wpp_latam")
+}
+source("functions_rates.R")
+```
+
+```{r m5-write-rates}
+# Escribir los archivos de tasas para Colombia (ISO3 = "COL")
+write_socsim_fertility_rates_WPP(country = "Colombia", iso = "COL")
+write_socsim_mortality_rates_WPP(country = "Colombia", iso = "COL")
+
+# Ejemplo: los archivos escritos para 1950
+list.files("rates", pattern = "1950")
+```
+
+#### 5.4 Población inicial {#m5-poblacion}
+
+Creamos una población inicial pequeña (1000 individuos) para que la simulación
+sea rápida en el taller. El sexo y las fechas de nacimiento se asignan al azar; el
+resto de columnas las completa SOCSIM.
+
+```{r m5-initpop}
+set.seed(101224)
+size_opop <- 1000
+
+presim.opop <- setNames(
+  data.frame(matrix(0, ncol = 14, nrow = size_opop)),
+  c(
+    "pid", "fem", "group", "nev", "dob", "mom", "pop",
+    "nesibm", "nesibp", "lborn", "marid", "mstat", "dod", "fmult"
+  )
+)
+presim.opop$pid <- 1:size_opop
+presim.opop$fem <- sample(0:1, size_opop, replace = TRUE)
+presim.opop$group <- 1
+presim.opop$dob <- sample(500:1000, size_opop, replace = TRUE)
+
+write.table(presim.opop, "presim.opop", row.names = FALSE, col.names = FALSE)
+write.table(data.frame(), "presim.omar", row.names = FALSE, col.names = FALSE) # matrimonios vacío
+```
+
+#### 5.5 Correr la simulación {#m5-correr}
+
+El archivo de supervisión `socsim_Colombia.sup` le indica a SOCSIM qué segmentos
+simular: primero 100 años de "calentamiento" con las tasas de 1950 (para obtener
+una estructura por edad estable), y luego un segmento por año hasta 2023.
+
+> **Tiempo de cómputo.** La simulación tarda algunos minutos. La corremos una vez
+> y guardamos los resultados; si ya existen, solo los cargamos.
+
+```{r m5-run, results='hide'}
+folder <- getwd()
+supfile <- "socsim_Colombia.sup"
+seed <- "101224"
+archivo_sim <- "data/socsim_resultados.rds"
+
+if (!file.exists(archivo_sim)) {
+  rsocsim::socsim(folder, supfile, seed, process_method = "future")
+  opop <- rsocsim::read_opop(folder = folder, supfile = supfile, seed = seed, suffix = "", fn = NULL)
+  omar <- rsocsim::read_omar(folder = folder, supfile = supfile, seed = seed, suffix = "", fn = NULL)
+  saveRDS(list(opop = opop, omar = omar), archivo_sim)
+}
+
+sim <- readRDS(archivo_sim)
+opop <- sim$opop
+omar <- sim$omar
+```
+
+El archivo de población tiene un registro por individuo (identificadores de madre
+`mom`, padre `pop` y último hijo `lborn`, fechas de nacimiento `dob` y defunción
+`dod`, etc.):
+
+```{r m5-opop}
+head(opop)
+```
+
+#### 5.6 Estimar las tasas a partir de la simulación {#m5-estimar}
+
+Para verificar que la simulación reproduce las tasas de entrada, estimamos las
+tasas de fecundidad y mortalidad por edad a partir de los microdatos simulados,
+con las funciones del paquete.
+
+```{r m5-estimate}
+asfr_sim <- rsocsim::estimate_fertility_rates(
+  opop = opop, final_sim_year = 2023,
+  year_min = 1950, year_max = 2020, year_group = 5,
+  age_min_fert = 15, age_max_fert = 50, age_group = 5
+)
+
+asmr_sim <- rsocsim::estimate_mortality_rates(
+  opop = opop, final_sim_year = 2023,
+  year_min = 1950, year_max = 2020, year_group = 5,
+  age_max_mort = 100, age_group = 5
+)
+```
+
+```{r m5-plot-rates, fig.height=4.5}
+yrs_plot <- c("[1950,1955)", "[1980,1985)", "[2015,2020)")
+age_levels <- levels(asmr_sim$age)
+
+bind_rows(
+  asfr_sim %>% mutate(rate = "Fecundidad", sex = "female"),
+  asmr_sim %>% mutate(rate = "Mortalidad") %>% filter(sex == "female")
+) %>%
+  mutate(age = factor(as.character(age), levels = age_levels)) %>%
+  filter(socsim != 0 & !is.infinite(socsim) & !is.nan(socsim), year %in% yrs_plot) %>%
+  ggplot(aes(x = age, y = socsim, group = year, colour = year)) +
+  geom_line(linewidth = 1) +
+  facet_wrap(. ~ rate, scales = "free") +
+  facetted_pos_scales(y = list(
+    scale_y_continuous(),
+    scale_y_continuous(trans = "log10")
+  )) +
+  scale_x_discrete(guide = guide_axis(angle = 90)) +
+  scale_color_manual(values = c("#FFCD00", "#003087", "#C8102E")) +
+  labs(
+    title = "Tasas estimadas a partir de la simulación SOCSIM (mujeres, Colombia)",
+    x = "Edad", y = "Estimación", color = "Años"
+  ) +
+  theme_bw()
+```
+
+#### 5.7 Comparar SOCSIM con el WPP {#m5-comparar}
+
+Como verificación final, comparamos las tasas de salida de SOCSIM con las tasas de
+entrada del WPP, agregadas a los mismos grupos quinquenales de edad y período.
+
+```{r m5-compare}
+col_wpp <- read_parquet("data/wpp_latam/wpp_COL.parquet")
+
+# Cortes de año y edad usados en las estimaciones SOCSIM
+yr_breaks <- unique(as.numeric(str_extract_all(asfr_sim$year, "\\d+", simplify = TRUE)))
+age_breaks <- unique(as.numeric(str_extract_all(asfr_sim$age, "\\d+", simplify = TRUE)))
+yr_range <- min(yr_breaks):max(yr_breaks - 1)
+
+# Fecundidad WPP agregada (5x5)
+WPP_fert <- col_wpp %>%
+  filter(sex == "f", year %in% yr_range, age >= 15, age <= 49) %>%
+  mutate(
+    year = cut(year, yr_breaks, right = FALSE),
+    age = cut(age, age_breaks, right = FALSE)
+  ) %>%
+  filter(!is.na(age)) %>%
+  summarise(Estimate = mean(fx, na.rm = TRUE), .by = c(year, age)) %>%
+  mutate(Source = "WPP", Rate = "Fecundidad")
+
+SocsimF <- asfr_sim %>% transmute(year, age,
+  Estimate = socsim,
+  Source = "SOCSIM", Rate = "Fecundidad"
+)
+
+bind_rows(WPP_fert, SocsimF) %>%
+  mutate(age = factor(as.character(age), levels = age_levels)) %>%
+  filter(Estimate != 0 & !is.infinite(Estimate) & !is.nan(Estimate), year %in% yrs_plot) %>%
+  ggplot(aes(x = age, y = Estimate, group = interaction(year, Source))) +
+  geom_line(aes(colour = year, linetype = Source), linewidth = 1) +
+  scale_linetype_manual(values = c("WPP" = "11", "SOCSIM" = "solid")) +
+  scale_color_manual(values = c("#FFCD00", "#003087", "#C8102E")) +
+  scale_x_discrete(guide = guide_axis(angle = 90)) +
+  labs(
+    title = "Fecundidad: SOCSIM vs WPP (mujeres, Colombia)",
+    x = "Edad", y = "Tasa específica de fecundidad", colour = "Años", linetype = "Fuente"
+  ) +
+  theme_bw()
+```
+
+En general, las tasas derivadas de la microsimulación se aproximan a las del WPP
+usadas como entrada, lo que valida la simulación. Las diferencias se reducen al
+aumentar el tamaño de la población inicial. En el **Módulo 6** usamos estos
+resultados para estudiar la pérdida y disponibilidad de parientes.

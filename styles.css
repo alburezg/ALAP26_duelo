@@ -1,0 +1,41 @@
+/* Estilos del sitio del taller */
+
+body {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* Cajas de nota (blockquotes) */
+blockquote {
+  background: #f4f7fb;
+  border-left: 4px solid #355070;
+  padding: 0.6em 1em;
+  color: #24303f;
+  font-size: 0.97em;
+}
+
+/* Bloques de código */
+pre {
+  border-radius: 6px;
+  font-size: 0.9em;
+}
+
+/* Tablas */
+table {
+  margin: 1em auto;
+}
+
+/* Encabezados de módulo */
+h1, h2, h3 {
+  color: #355070;
+}
+
+/* Recuadro para enunciados de ejercicios */
+.ejercicio {
+  background: #fdf3ec;
+  border: 1px solid #eaac8b;
+  border-left: 4px solid #b56576;
+  border-radius: 6px;
+  padding: 0.8em 1em;
+  margin: 1em 0;
+}

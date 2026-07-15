@@ -1,0 +1,83 @@
+---
+title: "Demografía del parentesco con énfasis en estimaciones de duelo"
+subtitle: "Escuela ALAP 2026 · San José, Costa Rica"
+author: "Diego Alburez-Gutierrez, Enrique Acosta &amp; Liliana Calderón"
+date: "Actualizado: `r Sys.Date()`"
+output:
+  html_document:
+    toc: false
+    theme: readable
+    highlight: pygments
+    css: styles.css
+bibliography: kinship.bib
+link-citations: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  fig.width = 8,
+  fig.height = 5
+)
+# Evitar notación científica en los resultados
+options(scipen = 999999)
+```
+
+Bienvenidas y bienvenidos al taller **Demografía del parentesco con énfasis en
+estimaciones de duelo** de la Escuela ALAP 2026. Este sitio reúne todo el
+material del curso: una pestaña por módulo. Los módulos teóricos se acompañan de
+presentaciones en vivo; los módulos de **laboratorio** contienen el código en R
+que ejecutaremos en conjunto.
+
+Todo el material del curso (código y datos) está disponible en el repositorio de
+GitHub: [**enlace al repositorio**](URL_PENDIENTE) *(enlace por definir)*.
+
+> **Cómo usar este sitio.** Cada pestaña es un módulo. Los bloques de código
+> pueden copiarse y ejecutarse en RStudio. Todo el texto está en español; el
+> código y los nombres de funciones se mantienen en inglés.
+
+# Módulos {.tabset .tabset-fade}
+
+## Módulo 1
+
+```{r child = "modulo_1.Rmd"}
+```
+
+## Módulo 2
+
+```{r child = "modulo_2.Rmd"}
+```
+
+## Módulo 3
+
+```{r child = "modulo_3.Rmd"}
+```
+
+## Módulo 4
+
+```{r child = "modulo_4.Rmd"}
+```
+
+## Módulo 5
+
+```{r child = "modulo_5.Rmd"}
+```
+
+## Módulo 6
+
+```{r child = "modulo_6.Rmd"}
+```
+
+## Soluciones
+
+```{r child = "soluciones.Rmd"}
+```
+
+## Bibliografía
+
+Referencias citadas a lo largo del taller:
+
+<div id="refs"></div>

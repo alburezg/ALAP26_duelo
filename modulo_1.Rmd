@@ -1,0 +1,121 @@
+### Módulo 1 · Introducción a la demografía del parentesco + preparación técnica {#modulo1}
+
+*A cargo de Diego Alburez-Gutierrez.*
+
+Este primer módulo combina una **introducción teórica** (presentación en vivo)
+con un **laboratorio de preparación técnica**. Al terminar, cada participante
+tendrá su entorno de R listo y habrá localizado todos los datos que usaremos a
+lo largo del taller.
+
+**Contenido de este módulo:**
+
+- [1.1 ¿Qué es la demografía del parentesco?](#m1-teoria)
+- [1.2 Instalación de R y los paquetes necesarios](#m1-instalacion)
+- [1.3 Datos del WPP para América Latina](#m1-wpp)
+- [1.4 Datos del conflicto colombiano](#m1-colombia)
+
+#### 1.1 ¿Qué es la demografía del parentesco? {#m1-teoria}
+
+La demografía formal del parentesco permite estimar, a partir de las tasas de
+fecundidad y mortalidad de una población, **cuántos parientes vivos (y fallecidos)
+puede esperar tener una persona promedio a cada edad**. El marco parte del
+trabajo seminal de @goodman_family_1974 y fue reformulado en términos matriciales
+por @caswell_formal_2019, con extensiones posteriores para tasas variables en el
+tiempo [@caswell_formal_2021] y modelos de dos sexos [@caswell_formal_2022].
+
+Todas estas variantes están implementadas en el paquete de R
+[**DemoKin**](https://github.com/IvanWilli/DemoKin). En la segunda parte del
+taller usaremos estas estimaciones para cuantificar el **duelo a nivel
+poblacional**: cuántas personas pierden a un familiar y cuántas quedan en duelo
+por cada defunción.
+
+> La parte conceptual de este módulo se desarrolla en la presentación. Aquí nos
+> concentramos en dejar el entorno de trabajo listo.
+
+#### 1.2 Instalación de R y los paquetes necesarios {#m1-instalacion}
+
+Necesitamos R (≥ 4.2) y RStudio. Instalamos DemoKin **directamente desde GitHub**
+(la versión más reciente) y los demás paquetes desde CRAN. Ejecute este bloque
+una sola vez:
+
+```{r m1-install, eval=FALSE}
+# Instalar DemoKin desde GitHub
+install.packages("remotes")
+remotes::install_github("IvanWilli/DemoKin")
+
+# Paquete de microsimulación (Módulos 5-6)
+install.packages("rsocsim")
+
+# Paquetes de manejo y visualización de datos
+install.packages(c("tidyverse", "arrow", "scales"))
+```
+
+Cargamos los paquetes que usaremos en los laboratorios:
+
+```{r m1-libs}
+library(tidyverse) # manipulación y gráficos
+library(DemoKin) # modelos de parentesco
+library(arrow) # lectura de archivos .parquet
+```
+
+```{r m1-version, echo=FALSE}
+cat("Versión de DemoKin:", as.character(packageVersion("DemoKin")), "\n")
+```
+
+#### 1.3 Datos del World Population Prospects (WPP) para América Latina {#m1-wpp}
+
+Los modelos de parentesco necesitan tres insumos por edad, sexo y año:
+**supervivencia**, **fecundidad** y **población**. Preparamos estos insumos a
+partir del [World Population Prospects 2024](https://population.un.org/wpp/) de
+las Naciones Unidas para ~25 países de América Latina y el Caribe (1950–2023) y
+los guardamos comprimidos en `data/wpp_latam_1950_2023.zip` (un archivo
+`.parquet` por país).
+
+Descomprimimos el archivo una vez:
+
+```{r m1-unzip}
+dir.create("data/wpp_latam", showWarnings = FALSE)
+unzip("data/wpp_latam_1950_2023.zip", exdir = "data/wpp_latam")
+
+# Países disponibles
+countries <- read_csv("data/wpp_latam/countries.csv")
+countries
+```
+
+Cada país es un archivo `wpp_<ISO3>.parquet`. Veamos el de Colombia:
+
+```{r m1-wpp-col}
+col <- read_parquet("data/wpp_latam/wpp_COL.parquet")
+glimpse(col)
+```
+
+La tabla está en formato **tidy**: una fila por combinación de `year`, `sex`
+(`"f"`/`"m"`) y `age` (0–100), con las columnas:
+
+- `px` — probabilidad de sobrevivir de la edad *x* a *x+1*;
+- `qx`, `mx` — probabilidad y tasa de mortalidad;
+- `fx` — tasa de fecundidad específica por edad (mujeres; 0 en hombres);
+- `pop` — población al 1 de enero.
+
+#### 1.4 Datos del conflicto colombiano {#m1-colombia}
+
+Para el Módulo 3 reproduciremos las estimaciones de duelo del artículo sobre el
+conflicto armado colombiano [@acosta_weaponizing_2026]. Los datos están en
+`data/colombia/`:
+
+```{r m1-col-data}
+# Muertes por homicidio relacionadas con el conflicto (1985-2018),
+# por año, sexo y edad de la víctima
+homicidios <- read_parquet("data/colombia/col_homicidios_1985_2018.parquet")
+glimpse(homicidios)
+
+# Total de homicidios estimados (denominador de los multiplicadores)
+read_csv("data/colombia/col_homicidios_totales.csv")
+```
+
+> **Solo homicidios.** El artículo original también estima el duelo por
+> desapariciones forzadas. En este taller, por simplicidad, consideraremos
+> **únicamente los homicidios**.
+
+Con el entorno listo y los datos localizados, en el Módulo 2 aprenderemos a
+generar estimaciones de parentesco con DemoKin.

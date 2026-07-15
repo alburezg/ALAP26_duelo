@@ -1,0 +1,197 @@
+### Módulo 6 · Simulaciones: pérdida de parientes y conclusiones {#modulo6}
+
+*A cargo de Liliana Calderón.* (Adaptado del taller de la Escuela ALAP 2024;
+sección de pérdida de parientes preparada originalmente por Mallika Snyder.)
+
+Una vez corrida la simulación (Módulo 5), SOCSIM nos da una **genealogía
+sintética** de toda la población: sabemos cuándo nace, se casa y muere cada
+individuo, y quiénes son sus padres y su cónyuge. Con esa información podemos
+identificar redes de parentesco extensas —incluso parientes lejanos difíciles de
+captar en una encuesta— y estudiar la **pérdida de parientes** a lo largo del
+tiempo. Este es un enfoque complementario al de los modelos analíticos de los
+Módulos 2 y 3.
+
+```{r m6-libs, message=FALSE}
+library(rsocsim)
+library(tidyverse)
+library(data.table)
+```
+
+Cargamos los resultados de la simulación del Módulo 5:
+
+```{r m6-load}
+sim <- readRDS("data/socsim_resultados.rds")
+opop <- sim$opop
+omar <- sim$omar
+```
+
+**Contenido de este módulo:**
+
+- [6.1 Preparar los datos](#m6-prep)
+- [6.2 Una función para estimar la pérdida de parientes](#m6-funcion)
+- [6.3 Estimar la pérdida a lo largo del tiempo](#m6-estimar)
+- [6.4 Resultados](#m6-resultados)
+- [6.5 Conclusiones](#m6-conclusiones)
+
+#### 6.1 Preparar los datos {#m6-prep}
+
+SOCSIM registra el tiempo en **meses**. Una función auxiliar convierte los meses
+en años calendario, y con ella calculamos el año de nacimiento y de defunción de
+cada individuo (a quienes siguen vivos al final les asignamos el último mes
+simulado como fecha de defunción):
+
+```{r m6-prep-data}
+asYr <- function(month, last_month, final_sim_year) {
+  final_sim_year - trunc((last_month - month) / 12)
+}
+
+last_month <- max(opop$dob)
+final_sim_year <- 2023
+
+opop <- opop %>%
+  mutate(
+    dod = if_else(dod == 0, last_month, dod),
+    dob_year = asYr(dob, last_month, final_sim_year),
+    dod_year = asYr(dod, last_month, final_sim_year)
+  )
+```
+
+#### 6.2 Una función para estimar la pérdida de parientes {#m6-funcion}
+
+Como grupo de referencia usamos a las **mujeres de 25 a 39 años vivas en un año
+dado** (la muestra cambia cada año). La función `getKinLoss()` identifica a esas
+mujeres, recupera a sus parientes con `rsocsim::retrieve_kin()` y calcula, para
+cada tipo de pariente, qué proporción de la muestra perdió a un familiar ese año
+y qué proporción tenía un familiar vivo el año anterior.
+
+```{r m6-getkinloss}
+getKinLoss <- function(year_of_interest, opop, omar) {
+  pid_data <- opop %>%
+    filter(
+      data.table::between(year_of_interest, dob_year, dod_year, incbounds = FALSE),
+      fem == 1
+    ) %>%
+    mutate(age = year_of_interest - dob_year) %>%
+    filter(data.table::between(age, 25, 39, incbounds = TRUE))
+  pid_vec <- pid_data$pid
+
+  kin <- rsocsim::retrieve_kin(
+    opop = opop, omar = omar, pid = pid_vec,
+    extra_kintypes = NULL, kin_by_sex = FALSE
+  )
+
+  bind_rows(lapply(seq_along(kin), function(x) {
+    kin2 <- unlist(kin[[x]], use.names = FALSE)
+    names(kin2) <- rep(pid_vec, unlist(lapply(kin[[x]], length)))
+    dob_k <- opop$dob_year[match(kin2, opop$pid)]
+    dod_k <- opop$dod_year[match(kin2, opop$pid)]
+    vivo_antes <- if_else(
+      data.table::between(year_of_interest - 1, dob_k, dod_k, NAbounds = NA, incbounds = FALSE),
+      TRUE, FALSE
+    )
+    muere_ahora <- dod_k %in% year_of_interest
+
+    tibble(
+      kintype = names(kin[x]),
+      year = year_of_interest,
+      n_total = length(pid_vec),
+      n_losekin = length(unique(names(kin2[muere_ahora]))),
+      n_withkin = length(unique(names(kin2[vivo_antes == TRUE]))),
+      pc_losekin_total = 100 * n_losekin / n_total,
+      pc_withkin = 100 * n_withkin / n_total
+    )
+  }))
+}
+```
+
+#### 6.3 Estimar la pérdida a lo largo del tiempo {#m6-estimar}
+
+Ejecutamos la función en intervalos de 10 años entre 1950 y 2020. (Como el paso
+de recuperación de parientes es lento, lo calculamos una vez y guardamos el
+resultado.)
+
+```{r m6-run}
+archivo_kinloss <- "data/socsim_kinloss.rds"
+
+if (!file.exists(archivo_kinloss)) {
+  kinloss_data <- bind_rows(lapply(
+    seq(1950, 2020, by = 10),
+    function(y) getKinLoss(year_of_interest = y, opop = opop, omar = omar)
+  ))
+  saveRDS(kinloss_data, archivo_kinloss)
+}
+kinloss_data <- readRDS(archivo_kinloss)
+
+# Etiquetas legibles y orden de los tipos de pariente
+kinloss_data <- kinloss_data %>%
+  mutate(
+    kintype = recode(kintype,
+      ggparents = "Bisabuelos", gparents = "Abuelos", parents = "Padres",
+      siblings = "Hermanos", spouse = "Cónyuges", children = "Hijos",
+      gchildren = "Nietos"
+    ),
+    kintype = fct_relevel(
+      kintype, "Bisabuelos", "Abuelos", "Padres",
+      "Hermanos", "Cónyuges", "Hijos", "Nietos"
+    )
+  )
+```
+
+#### 6.4 Resultados {#m6-resultados}
+
+**Pérdida de parientes** de las mujeres de 25–39 años a lo largo del tiempo:
+
+```{r m6-plot-loss, fig.height=4.5}
+kinloss_data %>%
+  ggplot(aes(x = year, y = pc_losekin_total, colour = kintype)) +
+  geom_line(linewidth = 1) +
+  scale_x_continuous(breaks = seq(1950, 2020, by = 10)) +
+  labs(
+    x = "Año", y = "Mujeres de 25-39 años que pierden un familiar (%)",
+    colour = "Tipo de familiar"
+  ) +
+  theme_bw()
+```
+
+**Disponibilidad de parientes** (proporción con un familiar vivo el año anterior):
+
+```{r m6-plot-avail, fig.height=4.5}
+kinloss_data %>%
+  ggplot(aes(x = year, y = pc_withkin, colour = kintype)) +
+  geom_line(linewidth = 1) +
+  scale_x_continuous(breaks = seq(1950, 2020, by = 10)) +
+  labs(
+    x = "Año", y = "Mujeres de 25-39 años con un familiar vivo el año anterior (%)",
+    colour = "Tipo de pariente"
+  ) +
+  theme_bw()
+```
+
+> **Interpretación.** Como cabría esperar para este grupo de edad, las tasas más
+> altas de pérdida corresponden a abuelos y padres. El aumento de la
+> disponibilidad de abuelos a lo largo del tiempo refleja la mayor esperanza de
+> vida; la caída en la disponibilidad de hijos y cónyuges refleja el descenso de
+> la fecundidad y la nupcialidad.
+
+#### 6.5 Conclusiones {#m6-conclusiones}
+
+En este taller recorrimos dos familias de métodos para la demografía del
+parentesco y del duelo:
+
+- Los **modelos analíticos matriciales** (DemoKin, Módulos 2–3), que dan valores
+  esperados de parientes vivos y fallecidos de forma rápida y transparente, y que
+  usamos para estimar el duelo a nivel poblacional (incidencia, multiplicadores,
+  prevalencia y su distribución por edad).
+- La **microsimulación** (SOCSIM, Módulos 5–6), que genera genealogías completas
+  y permite estudiar redes de parentesco extensas y la cronología de los eventos
+  vitales.
+
+Ambos enfoques son complementarios: los modelos analíticos son eficientes y
+exactos en la media; la microsimulación captura la variabilidad individual y
+relaciones de parentesco difíciles de modelar analíticamente. Juntos ofrecen un
+conjunto de herramientas potente para cuantificar cómo la mortalidad —y en
+particular la violencia— reverbera a través de las familias.
+
+> **Más información.** Documentación de `rsocsim`:
+> <https://mpidr.github.io/rsocsim/>. Documentación de `DemoKin`:
+> <https://github.com/IvanWilli/DemoKin>.
