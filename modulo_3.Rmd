@@ -21,6 +21,7 @@ artículo también analiza las desapariciones forzadas).
 
 ```{r m3-libs, message=FALSE}
 library(tidyverse)
+library(DemoKin)
 library(arrow)
 ```
 
@@ -35,57 +36,87 @@ library(arrow)
 
 #### 3.1 Los datos {#m3-datos}
 
-Usaremos cuatro insumos, todos en `data/colombia/`:
+Usaremos tres insumos, todos en `data/colombia/` (su documentación completa está
+en la pestaña **Datos**):
 
 ```{r m3-setup}
 dcol <- "data/colombia"
 
-# (a) Estructura de parentesco: parientes vivos por año, sexo/edad de Focal
-#     y sexo/edad del pariente. Es la SALIDA del modelo DemoKin (Módulo 2)
-#     aplicado a Colombia; no se versiona por su tamaño. Si no existe, la
-#     generamos con prep/03 (corre kin2sex; tarda ~10 min) y se reutiliza.
-archivo_kin <- file.path(dcol, "col_kin_1985_2018.parquet")
-if (!file.exists(archivo_kin)) source("prep/03_build_kinship_colombia.R")
-kin <- read_parquet(archivo_kin)
+# (a) Datos demográficos colombianos: son los INSUMOS del modelo de parentesco
+#     (fecundidad fx, supervivencia px, población nx) más la población y el
+#     factor ax que usaremos para el duelo, por año, sexo y edad (1950-2018).
+demo <- read_parquet(file.path(dcol, "col_demo_1950_2018.parquet"))
+pop <- demo %>% select(year, sex, age, pop, ax)
 
 # (b) Muertes por homicidio (conflicto), por año, sexo y edad de la víctima.
 homicidios <- read_parquet(file.path(dcol, "col_homicidios_1985_2018.parquet"))
 
-# (c) Datos demográficos colombianos (población y factor ax).
-demo <- read_parquet(file.path(dcol, "col_demo_1950_2018.parquet"))
-pop <- demo %>% select(year, sex, age, pop, ax)
-
-# (d) Proporción de inmigrantes (se excluyen del riesgo de duelo).
+# (c) Proporción de inmigrantes (se excluyen del riesgo de duelo).
 inmigrantes <- read_parquet(file.path(dcol, "col_inmigrantes_2018.parquet"))
-
-# Total de homicidios estimados (denominador de los multiplicadores).
-n_homicidios <- read_csv(file.path(dcol, "col_homicidios_totales.csv"),
-  show_col_types = FALSE
-)$n_muertes[1]
 ```
 
-La **estructura de parentesco** (`kin`) es la salida del modelo bisexual variable
-en el tiempo del Módulo 2, corrido para Colombia con salida por período
-1985–2018 y para Focal de ambos sexos. Por su tamaño (~20 MB) no se versiona: se
-genera con `prep/03_build_kinship_colombia.R` (o automáticamente la primera vez
-que se ejecuta este módulo). El código que la produce es equivalente a:
+El cuarto insumo es la **estructura de parentesco** (`kin`): cuántos parientes
+vivos de cada tipo tiene una persona promedio, por año y por sexo/edad de Focal y
+del pariente. No es un dato externo, sino la **salida del modelo del Módulo 2**
+(de dos sexos y variable en el tiempo) aplicado a las tasas colombianas
+`demo`, con salida por período 1985–2018 y para Focal de ambos sexos.
 
-> **Nota sobre el período.** Para que el modelo corra rápido en el taller, aquí
-> lo iniciamos en **1950** (usando solo datos del WPP). El artículo original lo
-> inicia en 1900, incorporando mortalidad histórica anterior a 1950. Como DemoKin
-> supone una población estable antes del primer año, iniciar en 1950 da
-> estimaciones de parentesco lejano algo **mayores** que las publicadas; las
-> cifras son, por tanto, cercanas pero no idénticas a las del artículo.
+Como el cálculo tarda unos minutos, lo corremos **una sola vez**, guardamos el
+resultado en un archivo y lo reutilizamos: si el archivo ya existe, simplemente lo
+leemos (esa es nuestra "caché"). El código es el mismo `kin2sex()` del Módulo 2,
+generalizado a los ocho tipos de pariente y a los dos sexos de Focal:
 
-```{r m3-kin-gen, eval=FALSE}
-# (equivalente a lo que hicimos en el Módulo 2, pero para 1985-2018 y ambos sexos)
-kin2sex(
-  pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
-  time_invariant = FALSE,
-  output_period = 1985:2018,
-  output_kin = c("c", "d", "gd", "gm", "m", "n", "a", "s"),
-  sex_focal = "f"
-) # y de nuevo con sex_focal = "m"
+> **Nota sobre el período.** Para que el modelo corra rápido en el taller, aquí lo
+> iniciamos en **1950** (usando solo datos del WPP). El artículo original lo inicia
+> en 1900, incorporando mortalidad histórica anterior a 1950. Como DemoKin supone
+> una población estable antes del primer año (véase "condiciones de frontera" en el
+> Módulo 2), iniciar en 1950 da estimaciones de parentesco lejano algo **mayores**
+> que las publicadas; las cifras son, por tanto, cercanas pero no idénticas a las
+> del artículo.
+
+```{r m3-kin}
+archivo_kin <- file.path(dcol, "col_kin_1985_2018.parquet")
+
+if (!file.exists(archivo_kin)) {
+  # Pasar una tasa del formato tidy (una fila por edad-año) a matriz (edad x año)
+  a_matriz <- function(variable, sexo) {
+    demo %>%
+      filter(sex == sexo) %>%
+      select(age, year, valor = all_of(variable)) %>%
+      arrange(age, year) %>%
+      pivot_wider(names_from = year, values_from = valor) %>%
+      select(-age) %>%
+      as.matrix()
+  }
+
+  # kin2sex corre para un sexo de Focal a la vez; lo llamamos para cada sexo
+  correr_kin <- function(sexo_focal) {
+    kin2sex(
+      pf = a_matriz("px", "f"), pm = a_matriz("px", "m"),
+      ff = a_matriz("fx", "f"), fm = a_matriz("fx", "m"),
+      nf = a_matriz("nx", "f"), nm = a_matriz("nx", "m"),
+      time_invariant = FALSE,
+      output_period = 1985:2018,
+      output_kin = c("c", "d", "gd", "gm", "m", "n", "a", "s"),
+      sex_focal = sexo_focal,
+      birth_female = 0.5
+    )$kin_full %>%
+      as_tibble() %>%
+      mutate(sex_focal = sexo_focal)
+  }
+
+  kin <- bind_rows(correr_kin("f"), correr_kin("m")) %>%
+    transmute(
+      year = as.integer(year), sex_focal,
+      age_focal = as.integer(age_focal), kin, sex_kin,
+      age_kin = as.integer(age_kin), living
+    ) %>%
+    filter(living >= 1e-6) # descartar celdas prácticamente vacías
+
+  write_parquet(kin, archivo_kin)
+}
+
+kin <- read_parquet(archivo_kin)
 ```
 
 ```{r m3-glimpse}
@@ -242,6 +273,16 @@ P(\text{cercana y extendida})&= (1 - p_0^{\mathcal{C}})\,(1 - p_0^{\mathcal{D}})
 P(\text{no en duelo})        &= p_0^{\mathcal{C}}\; p_0^{\mathcal{D}}.
 \end{aligned}
 $$
+
+La lógica booleana detrás de estas cuatro categorías se ve mejor con un
+**diagrama de Venn**: el círculo izquierdo son quienes han perdido al menos un
+pariente **cercano** (el complemento de $p_0^{\mathcal{C}}$); el derecho, quienes
+han perdido al menos un pariente **extendido** (complemento de
+$p_0^{\mathcal{D}}$). Su **intersección** es la categoría "cercana y extendida";
+su **unión** (toda el área sombreada) es "cercana o extendida", con probabilidad
+$1 - p_0^{\mathcal{C}}\,p_0^{\mathcal{D}}$.
+
+![Operaciones booleanas sobre los dos estados de duelo. Cada región lleva su probabilidad bajo el supuesto de independencia. La intersección ("y") es la categoría "cercana y extendida"; toda el área sombreada es la unión ("o"). Adaptado del material metodológico de @acosta_weaponizing_2026.](venn_duelo.png)
 
 Las cuatro suman 1: cada persona cae en exactamente una. La probabilidad de haber
 perdido **al menos un pariente cualquiera** (*cercana O extendida*) es el
@@ -498,17 +539,6 @@ prevalencia <- bind_rows(prev_kin %>% select(etiqueta, personas, grupo), prev_gr
     millones = personas / 1e6,
     pct = 100 * personas / poblacion_2018
   )
-```
-
-```{r m3-cum-table, echo=FALSE}
-knitr::kable(
-  prevalencia %>% transmute(
-    `Pariente / grupo` = etiqueta,
-    `Personas en duelo (millones)` = round(millones, 2),
-    `% de la población` = round(pct, 1)
-  ),
-  caption = "Prevalencia acumulada del duelo por homicidio en 2018 (personas que han perdido al menos un pariente del tipo/grupo indicado)."
-)
 ```
 
 Siguiendo el artículo, mostramos los **parientes individuales** en un panel y los

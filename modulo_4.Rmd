@@ -157,7 +157,15 @@ código completo y comentado del ejercicio, resuelto paso a paso para Costa Rica
 
 > **Preguntas para la discusión.**
 >
-> - ¿Cómo se compara el multiplicador de duelo de su país con el de Colombia?
-> - ¿Qué tipo de pariente aporta más al duelo total? ¿Por qué?
-> - ¿Cómo cambiarían los resultados al usar mortalidad por homicidio en lugar de
->   mortalidad por todas las causas?
+> - ¿Cuántas personas quedan en duelo por cada homicidio en su país (el
+>   **multiplicador de duelo**)? ¿Cómo se compara con Colombia, y qué explica la
+>   diferencia: el **tamaño** de las redes de parentesco (herencia de la
+>   fecundidad pasada) o la **intensidad** de la violencia?
+> - ¿Qué tipo de pariente aporta más al duelo total por homicidio? ¿Por qué pesa
+>   tanto la familia **extendida** frente a la cercana?
+> - Los homicidios suelen concentrarse en **hombres jóvenes**. ¿Cómo se refleja ese
+>   patrón por edad y sexo de las víctimas en *quiénes* quedan en duelo y a través
+>   de qué parientes (madres, hermanas, hijas, parejas…)?
+> - Dado el descenso de la fecundidad en su país, ¿esperaría que el multiplicador
+>   de duelo por homicidio **aumente o disminuya** en las próximas décadas? ¿Por
+>   qué?

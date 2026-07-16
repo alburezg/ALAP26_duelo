@@ -1,0 +1,124 @@
+### Datos del taller {#datos}
+
+Esta pestaña documenta **todos los insumos** que usamos a lo largo del taller:
+qué contiene cada archivo, sus columnas, de dónde viene y cómo citarlo o
+descargarlo. Todos los archivos de entrada se distribuyen en la carpeta `data/`
+del [repositorio](https://github.com/alburezg/ALAP26_duelo) y pueden descargarse
+directamente desde los enlaces de abajo.
+
+Convención de columnas comunes: `year` = año calendario; `sex` = sexo (`"f"`
+mujeres, `"m"` hombres); `age` = edad en años simples (0–100).
+
+**Contenido:**
+
+- [D.1 World Population Prospects 2024 (América Latina)](#dat-wpp)
+- [D.2 Tasas de mortalidad por homicidio (Módulo 4)](#dat-homicidio)
+- [D.3 Datos del conflicto colombiano (Módulo 3)](#dat-colombia)
+- [D.4 Insumos de la microsimulación SOCSIM (Módulos 5–6)](#dat-socsim)
+- [D.5 Archivos que se generan al ejecutar el taller](#dat-generados)
+
+#### D.1 World Population Prospects 2024 — América Latina {#dat-wpp}
+
+Base demográfica del taller. Son los insumos (supervivencia, fecundidad y
+población) que alimentan los modelos de parentesco de **todos** los módulos de
+laboratorio. Se usan en los Módulos 1, 2, 4, 5, 6 y en las Soluciones.
+
+| Archivo | Descripción |
+|---|---|
+| [`data/wpp_latam_1950_2023.zip`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/wpp_latam_1950_2023.zip) | Un archivo `.parquet` por país (`wpp_<ISO3>.parquet`) más `countries.csv`. Cubre ~25 países de América Latina y el Caribe, 1950–2023. |
+| [`data/countries.csv`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/countries.csv) | Lista de países incluidos (`iso3`, `country`). |
+
+**Columnas de cada `wpp_<ISO3>.parquet`** (una fila por `year` × `sex` × `age`):
+
+| Columna | Significado |
+|---|---|
+| `iso3`, `country` | código ISO3 y nombre del país |
+| `year`, `sex`, `age` | año (1950–2023), sexo, edad (0–100) |
+| `px` | probabilidad de sobrevivir de la edad *x* a *x*+1 |
+| `qx`, `mx` | probabilidad y tasa de mortalidad por edad |
+| `fx` | tasa de fecundidad específica por edad (mujeres; 0 en hombres) |
+| `pop` | población al 1 de enero (personas) |
+
+**Fuente y referencia.** United Nations, Department of Economic and Social
+Affairs, Population Division (2024). *World Population Prospects 2024.* Tablas de
+vida completas por sexo, fecundidad por edad simple y población por edad y sexo.
+Disponible en <https://population.un.org/wpp/>. Licencia CC BY 3.0 IGO.
+
+#### D.2 Tasas de mortalidad por homicidio (Módulo 4) {#dat-homicidio}
+
+Insumo del **ejercicio** del Módulo 4 y de las Soluciones: la mortalidad de
+referencia con la que se estima el duelo por violencia en el país elegido.
+
+| Archivo | Descripción |
+|---|---|
+| [`data/homicide_mortality_rates.csv`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/homicide_mortality_rates.csv) | Tasas de mortalidad por homicidio por país, año, sexo y edad. |
+
+**Columnas:** `iso3`, `year`, `sex`, `age`, `mx` (tasa de mortalidad por
+homicidio).
+
+> **Marcador de posición (*placeholder*).** El archivo definitivo de tasas
+> específicas por homicidio aún no está disponible. Por ahora, este archivo
+> contiene la mortalidad por **todas las causas** del WPP 2024 (columna `mx`),
+> con la **misma estructura y nombre** que tendrá el archivo real. Cuando lleguen
+> las tasas por homicidio, basta con reemplazar este archivo y el código no
+> cambia. (Con mortalidad por todas las causas, los resultados reflejan el duelo
+> *total*, no solo el violento.)
+
+**Fuente y referencia.** Marcador de posición derivado del WPP 2024 (véase D.1).
+El archivo definitivo se distribuirá más adelante y se documentará aquí junto con
+su fuente.
+
+#### D.3 Datos del conflicto colombiano (Módulo 3) {#dat-colombia}
+
+Insumos para reproducir las estimaciones de duelo del conflicto armado
+colombiano. Provienen del paquete de replicación del artículo *Weaponizing
+Kinship* [@acosta_weaponizing_2026]. Están en `data/colombia/`.
+
+| Archivo | Descripción | Columnas |
+|---|---|---|
+| [`col_demo_1950_2018.parquet`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/colombia/col_demo_1950_2018.parquet) | Tasas demográficas colombianas 1950–2018: insumos del modelo de parentesco y base para el duelo. | `year`, `sex`, `age`, `fx` (fecundidad), `px` (supervivencia), `nx` (población usada como insumo del modelo), `pop` (población), `ax` (fracción del último año de vida, convierte `mx`→`qx`) |
+| [`col_homicidios_1985_2018.parquet`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/colombia/col_homicidios_1985_2018.parquet) | Muertes por homicidio relacionadas con el conflicto, por año, sexo y edad de la víctima (1985–2018). Solo homicidios (se excluyen las desapariciones forzadas). | `year`, `sex`, `age`, `dx` (número de muertes) |
+| [`col_inmigrantes_2018.parquet`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/colombia/col_inmigrantes_2018.parquet) | Proporción de inmigrantes por sexo y edad (censo 2018). Se excluyen del riesgo de duelo porque no estuvieron expuestos al conflicto. | `sex`, `age`, `imm_r` (proporción inmigrante) |
+| [`col_homicidios_totales.csv`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/colombia/col_homicidios_totales.csv) | Número total estimado de homicidios del conflicto (estimación puntual por sistemas múltiples). | `violation`, `n_muertes` |
+
+**Fuente y referencia.** Acosta, E., Alburez-Gutierrez, D., Gargiulo, M., &
+Torres, C. (2026). *Weaponizing Kinship: A Demographic Analysis of Bereavement in
+the Colombian Conflict.* Population and Development Review.
+[doi:10.1111/padr.70048](https://doi.org/10.1111/padr.70048). Los datos originales
+del conflicto provienen del Joint Non-State Actor and State Violence dataset del
+proyecto de estadística de derechos humanos; véase el artículo y su material de
+replicación para el detalle de fuentes y métodos.
+
+#### D.4 Insumos de la microsimulación SOCSIM (Módulos 5–6) {#dat-socsim}
+
+La microsimulación reutiliza las **mismas tasas del WPP** (D.1), convertidas al
+formato de texto que exige SOCSIM. Los únicos archivos propios de esta parte son
+el archivo de supervisión y las funciones auxiliares que ya vienen en el
+repositorio.
+
+| Archivo | Descripción |
+|---|---|
+| [`socsim_Colombia.sup`](https://github.com/alburezg/ALAP26_duelo/raw/main/socsim_Colombia.sup) | Archivo de supervisión de SOCSIM: define los segmentos a simular (100 años de calentamiento con tasas de 1950 y luego un segmento por año hasta 2023). |
+| [`functions_rates.R`](https://github.com/alburezg/ALAP26_duelo/raw/main/functions_rates.R) | Funciones que convierten los `.parquet` del WPP al formato de tasas mensuales de SOCSIM y las escriben en `rates/`. |
+
+**Fuente y referencia.** SOCSIM: @hammel_socsim_1976; @mason2016socsim. Interfaz en
+R `rsocsim`: <https://mpidr.github.io/rsocsim/>. Las tasas de entrada provienen
+del WPP 2024 (D.1). Esta parte está adaptada del taller de la Escuela ALAP 2024.
+
+#### D.5 Archivos que se generan al ejecutar el taller {#dat-generados}
+
+Los siguientes archivos **no** se distribuyen: son salidas que el propio código
+crea la primera vez que se ejecuta y luego reutiliza (caché). Aparecen en el
+`.gitignore`.
+
+| Archivo | Se genera en | Descripción |
+|---|---|---|
+| `data/colombia/col_kin_1985_2018.parquet` | Módulo 3 | Estructura de parentesco de Colombia (salida de `kin2sex`), ~21 MB. |
+| `data/kin_col_2018.rds` | Módulo 2 | Modelo de parentesco de Colombia para 2018. |
+| `data/kin_<ISO3>.parquet` | Módulo 4 / Soluciones | Estructura de parentesco del país elegido. |
+| `data/socsim_resultados.rds` | Módulo 5 | Población (`.opop`) y matrimonios (`.omar`) simulados. |
+| `data/socsim_kinloss.rds` | Módulo 6 | Pérdida y disponibilidad de parientes estimadas de la simulación. |
+| `rates/`, `presim.opop`, `presim.omar`, `sim_results_*/` | Módulos 5–6 | Archivos intermedios de SOCSIM. |
+
+> Como estos archivos se regeneran a partir de los insumos documentados arriba, no
+> es necesario descargarlos: se crean solos al correr los laboratorios en orden.

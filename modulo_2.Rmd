@@ -5,7 +5,7 @@
 En este laboratorio aprenderemos a estimar las **redes de parentesco** de una
 persona promedio (a quien llamaremos *Focal*) usando el paquete **DemoKin**. Nos
 concentraremos en el modelo más completo que usaremos en el taller: el modelo
-**bisexual y variable en el tiempo**, con salida por **período**. Este es
+**de dos sexos y variable en el tiempo**, con salida por **período**. Este es
 exactamente el modelo que sustenta las estimaciones de duelo del Módulo 3.
 
 ```{r m2-libs, message=FALSE}
@@ -16,38 +16,95 @@ library(arrow)
 
 **Contenido de este módulo:**
 
-- [2.1 El modelo bisexual y variable en el tiempo](#m2-modelo)
-- [2.2 Preparación de los insumos](#m2-insumos)
-- [2.3 Estimación con `kin2sex()`](#m2-kin2sex)
-- [2.4 Número de parientes vivos por edad de Focal](#m2-vivos)
-- [2.5 Distribución por edad de los parientes](#m2-distribucion)
-- [2.6 DemoKin no acepta combinar cohorte y período](#m2-error)
+- [2.1 El modelo de dos sexos y variable en el tiempo](#m2-modelo)
+- [2.2 El diagrama de parentesco: cómo se eligen los parientes](#m2-diagrama)
+- [2.3 Preparación de los insumos](#m2-insumos)
+- [2.4 Estimación con `kin2sex()`](#m2-kin2sex)
+- [2.5 Número de parientes vivos por edad de Focal](#m2-vivos)
+- [2.6 Distribución por edad de los parientes](#m2-distribucion)
+- [2.7 DemoKin no acepta combinar cohorte y período](#m2-error)
 
-#### 2.1 El modelo bisexual y variable en el tiempo {#m2-modelo}
+#### 2.1 El modelo de dos sexos y variable en el tiempo {#m2-modelo}
 
 La idea central de los modelos matriciales de parentesco [@caswell_formal_2019]
-es una **recurrencia**: el número esperado de parientes de un tipo dado que tiene
-Focal a la edad $x+1$ se obtiene proyectando a los parientes que tenía a la edad
-$x$ (que sobreviven y envejecen) y sumando los **nuevos** parientes que "nacen"
-en el intervalo:
+es una **recurrencia por edad de Focal**: el número esperado de parientes de un
+tipo dado que Focal tiene a la edad $x+1$ se obtiene proyectando a los parientes
+que tenía a la edad $x$ (que sobreviven y envejecen un año) y sumando los
+**nuevos** parientes que aparecen en el intervalo:
 
 $$
-\mathbf{k}_{x+1} = \mathbf{U}\,\mathbf{k}_{x} + \boldsymbol{\beta}_{x}
+\mathbf{k}(x+1) = \mathbf{U}\,\mathbf{k}(x) \;+\; \boldsymbol{\beta}(x),
+\qquad \mathbf{k}(0)=\mathbf{k}_0 .
 $$
 
-donde $\mathbf{k}_x$ es la distribución por edad de un tipo de pariente,
-$\mathbf{U}$ contiene las probabilidades de supervivencia y
-$\boldsymbol{\beta}_x$ representa el "reclutamiento" de nuevos parientes a través
-de la reproducción de otros parientes.
+Aquí $\mathbf{k}(x)$ es un **vector**, no un número: es la distribución por edad
+de un tipo de pariente (cuántas hijas de 0 años, de 1 año, …, tiene Focal cuando
+ella tiene la edad $x$). La ecuación tiene tres ingredientes:
 
-Este taller usa dos extensiones de ese modelo básico:
+- $\mathbf{U}$, la **matriz de supervivencia**: mueve a cada pariente un año hacia
+  arriba en la escala de edad, con su probabilidad de sobrevivir. Es la que hace
+  "envejecer" la red de un año al siguiente.
+- $\boldsymbol{\beta}(x)$, el **subsidio**: los parientes nuevos que se incorporan
+  en el intervalo (se explica enseguida).
+- $\mathbf{k}_0$, la **condición inicial**: los parientes que ya existen en el
+  momento en que Focal nace.
+
+**El subsidio $\boldsymbol{\beta}(x)$: de dónde salen los parientes nuevos.**
+El término $\mathbf{U}\,\mathbf{k}(x)$ solo hace envejecer a los parientes que ya
+había; por sí solo, la red nunca crecería. El **subsidio** es el flujo de
+parientes nuevos, y es lo que **acopla** unos tipos de pariente con otros. Casi
+siempre esos parientes nuevos llegan por un **nacimiento**, así que entran en la
+clase de edad 0; la clave es *quién* los tiene. El subsidio de un tipo de pariente
+se calcula a partir de la **abundancia de otro** pariente. Por ejemplo:
+
+- las **hijas** de Focal nacen de la propia Focal, de modo que su subsidio es
+  simplemente la fecundidad de Focal a la edad $x$;
+- las **nietas** nacen de las hijas de Focal, así que su subsidio depende de la
+  distribución por edad de las hijas, $\mathbf{d}(x)$:
+  $$\boldsymbol{\beta}_{\text{nietas}}(x) = \mathbf{F}\,\mathbf{d}(x),$$
+  donde $\mathbf{F}$ es la matriz de fecundidad por edad (coloca los nacimientos
+  en la edad 0).
+
+Este encadenamiento —un pariente "produce" a otro— es justamente lo que resume el
+**diagrama de parentesco** de la sección 2.2.
+
+**La condición inicial $\mathbf{k}_0$: los parientes al nacer Focal.** La
+recurrencia necesita un punto de partida a la edad 0. Para los **descendientes**
+es trivial: al nacer, Focal todavía no tiene hijas ni nietas, así que
+$\mathbf{d}(0)=\mathbf{0}$. Para los **ascendientes**, en cambio, la condición
+inicial la fija la estructura de la población. El caso fundamental es la
+**madre**: la distribución por edad de la madre en el instante en que nace Focal
+es la distribución de las **edades a la maternidad**,
+$$
+\mathbf{m}(0) = \boldsymbol{\pi},
+\qquad
+\pi_y = \frac{n_y\,f_y}{\sum_{y'} n_{y'}\,f_{y'}},
+$$
+es decir, las mujeres en edad fértil ponderadas por su fecundidad $f_y$ y su
+número $n_y$. A partir de la madre se derivan, "subiendo" una generación, la
+abuela, las tías y los hermanos que Focal ya tiene al nacer.
+
+**Las condiciones de frontera: el modelo variable en el tiempo.** Hasta aquí las
+tasas eran fijas. En el modelo **variable en el tiempo** las matrices llevan un
+índice de año calendario ($\mathbf{U}_t$, $\mathbf{F}_t$): cuando Focal pasa de la
+edad $x$ a $x+1$, el calendario también avanza un año, de modo que una cohorte
+recorre una **diagonal** en el diagrama de Lexis, atravesando las tasas de años
+sucesivos. Esto obliga a fijar una **condición de frontera temporal**: qué tasas
+regían *antes* del primer año con datos. DemoKin supone que la población era
+**estable** con las tasas de ese primer año. Por eso importa dónde arranca la
+serie: empezar en 1950 en lugar de 1900 (como hace el artículo del Módulo 3)
+altera un poco las estimaciones de los parientes más lejanos, cuyas trayectorias
+comienzan mucho antes del nacimiento de Focal.
+
+Este taller combina dos extensiones del modelo básico:
 
 - **Variable en el tiempo** [@caswell_formal_2021]: las tasas de fecundidad y
   mortalidad **cambian con el año calendario**. Esto es crucial en América
   Latina, donde la fecundidad cayó drásticamente desde 1960.
-- **Bisexual** [@caswell_formal_2022]: se rastrean parientes de **ambos sexos**
-  (madres y padres, hermanas y hermanos, etc.), integrando la demografía
-  femenina y masculina.
+- **De dos sexos** [@caswell_formal_2022]: se rastrean parientes de **ambos
+  sexos** (madres y padres, hermanas y hermanos, etc.), integrando la demografía
+  femenina y masculina. Cada tasa (supervivencia, fecundidad) y la población se
+  especifican por separado para mujeres y hombres.
 
 > **Período vs. cohorte.** Con tasas variables en el tiempo hay dos formas de
 > mirar el parentesco:
@@ -60,7 +117,37 @@ Este taller usa dos extensiones de ese modelo básico:
 > En el Módulo 3 necesitamos la mirada **por período** (`output_period`), porque
 > estimamos el duelo de toda la población en cada año.
 
-#### 2.2 Preparación de los insumos {#m2-insumos}
+#### 2.2 El diagrama de parentesco: cómo se eligen los parientes {#m2-diagrama}
+
+DemoKin identifica cada tipo de pariente con un **código corto**. La forma más
+clara de ver cómo se relacionan entre sí —y qué código le corresponde a cada
+uno— es el **diagrama de parentesco de Keyfitz** [@Keyfitz2005;
+@caswell_formal_2019]: una red centrada en Focal en la que cada nodo es un tipo de
+pariente y cada arista une a un pariente con el que lo "produce" (la relación de
+subsidio de la sección anterior). El diagrama siguiente muestra el número esperado
+de parientes **mujeres** de una Focal colombiana de 30 años, con el código de
+DemoKin y el conteo en cada nodo:
+
+![Diagrama de parentesco de Keyfitz para una mujer colombiana promedio de 30 años. Cada nodo es un tipo de pariente (con su código de DemoKin y el número esperado de parientes vivos); las aristas conectan a cada pariente con el que lo genera. Adaptado del taller de la Escuela ALAP 2024.](diagrama_keyfitz.png)
+
+La equivalencia entre los códigos de DemoKin y los de @caswell_formal_2019, junto
+con las etiquetas legibles, está en la tabla `demokin_codes` del paquete. Nótese
+que los códigos distinguen, por ejemplo, hermanas mayores (`os`) de menores
+(`ys`), porque el modelo las genera de forma distinta (véase el diagrama); cuando
+no interesa esa distinción, DemoKin ofrece códigos "colapsados" como `s`
+(hermanas/os), `a` (tías/os), `c` (primas/os) y `n` (sobrinas/os):
+
+```{r m2-codes}
+demokin_codes
+```
+
+Al ajustar un modelo, elegimos los parientes de interés pasando estos códigos al
+argumento `output_kin` (por ejemplo, `c("d", "m", "gm")` para hijas/os,
+madres/padres y abuelas/os). En este módulo trabajaremos con seis tipos:
+hijas/os (`d`), madres/padres (`m`), abuelas/os (`gm`), hermanas/os (`s`),
+primas/os (`c`) y tías/os (`a`).
+
+#### 2.3 Preparación de los insumos {#m2-insumos}
 
 `kin2sex()` necesita seis insumos, cada uno como una **matriz** con las **edades
 en las filas** (0–100) y los **años en las columnas**:
@@ -176,9 +263,9 @@ paternidad, pero no los usaremos aquí.
 fm <- ff
 ```
 
-#### 2.3 Estimación con `kin2sex()` {#m2-kin2sex}
+#### 2.4 Estimación con `kin2sex()` {#m2-kin2sex}
 
-Ejecutamos el modelo bisexual variable en el tiempo pidiendo la salida por
+Ejecutamos el modelo de dos sexos variable en el tiempo pidiendo la salida por
 **período** para el año **2018**. Con `output_kin` elegimos los tipos de
 pariente de interés: hijas/os (`d`), madres/padres (`m`), abuelas/os (`gm`),
 hermanas/os (`s`), primas/os (`c`) y tías/os (`a`).
@@ -224,7 +311,7 @@ La columna adicional `sex_kin` (`"f"`/`"m"`) distingue el sexo del pariente:
 `kin = "d"`, `sex_kin = "m"` son los **hijos** de Focal; `kin = "m"`,
 `sex_kin = "m"` es el **padre**, etc.
 
-#### 2.4 Número de parientes vivos por edad de Focal {#m2-vivos}
+#### 2.5 Número de parientes vivos por edad de Focal {#m2-vivos}
 
 Graficamos cuántos parientes de cada tipo y sexo tiene una mujer colombiana
 promedio a cada edad, según las tasas de 2018. La función `rename_kin()` de
@@ -264,10 +351,11 @@ col_2sex$kin_summary %>%
   theme_bw()
 ```
 
-#### 2.5 Distribución por edad de los parientes {#m2-distribucion}
+#### 2.6 Distribución por edad de los parientes {#m2-distribucion}
 
-El objeto `kin_full` guarda la **distribución por edad** de cada tipo de
-pariente. Por ejemplo, las edades de las hijas e hijos de una Focal de 60 años:
+El objeto `kin_full` guarda la **distribución por edad** de cada tipo de pariente,
+no solo su total. Empecemos por las **hijas e hijos** de una Focal de 60 años en
+2018 (dónde se concentran sus edades, separadas por sexo):
 
 ```{r m2-plot-dist}
 col_2sex$kin_full %>%
@@ -282,7 +370,32 @@ col_2sex$kin_full %>%
   theme_bw()
 ```
 
-#### 2.6 DemoKin no acepta combinar cohorte y período {#m2-error}
+Cada tipo de pariente tiene su propia distribución por edad. Comparémoslos en un
+gráfico **facetado** que agrega, junto a las hijas/os, otros tres tipos —
+hermanas/os, tías/os y primas/os — para la misma Focal de 60 años. Cada panel
+lleva su propia escala vertical (`scales = "free_y"`):
+
+```{r m2-plot-dist-facet, fig.height=6}
+col_2sex$kin_full %>%
+  rename_kin(sex = "2sex") %>%
+  filter(age_focal == 60, kin %in% c("d", "s", "a", "c")) %>%
+  ggplot(aes(x = age_kin, y = living, colour = sex_kin)) +
+  geom_line(linewidth = 1) +
+  facet_wrap(~kin_label, scales = "free_y") +
+  labs(
+    title = "Distribución por edad de los parientes de una Focal de 60 años (2018)",
+    x = "Edad del pariente", y = "Número esperado", colour = "Sexo del pariente"
+  ) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
+
+Cada distribución cuenta una historia demográfica distinta: las **hijas/os** se
+concentran en edades adultas jóvenes; las **hermanas/os**, alrededor de la edad de
+Focal; las **tías/os** en edades mayores (y son pocas, porque muchas ya han
+fallecido); y las **primas/os** se despliegan sobre un rango de edades amplio.
+
+#### 2.7 DemoKin no acepta combinar cohorte y período {#m2-error}
 
 `kin2sex()` produce **o** una salida por cohorte (`output_cohort`) **o** una por
 período (`output_period`), pero **no ambas a la vez**. Intentarlo produce un

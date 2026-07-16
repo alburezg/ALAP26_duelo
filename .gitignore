@@ -1,9 +1,11 @@
 # =============================================================================
 # .gitignore
 # Se versionan SOLO los archivos de ENTRADA y el CÓDIGO necesario para
-# reproducir el taller (index.Rmd, modulo_*.Rmd, prep/*.R, functions_rates.R,
+# reproducir el taller (index.Rmd, modulo_*.Rmd, functions_rates.R,
 # socsim_Colombia.sup, kinship.bib, styles.css, README.md y los datos de
 # entrada en data/). Todo lo que se GENERA al ejecutar el código queda excluido.
+# Los scripts de preparación de datos (prep/) son de uso interno de los docentes
+# (dependen de rutas locales) y NO se versionan.
 # =============================================================================
 
 # --- R / RStudio ---
@@ -26,6 +28,8 @@ CLAUDE.md
 
 # --- Materiales de referencia (PDFs/Word grandes; no forman parte del sitio) ---
 _ref/
+sim_results_socsim_Colombia.sup*
+prep
 
 # --- Datos crudos del WPP (demasiado grandes; se descargan aparte) ---
 data/wpp2024_raw/

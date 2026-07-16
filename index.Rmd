@@ -33,7 +33,7 @@ presentaciones en vivo; los módulos de **laboratorio** contienen el código en 
 que ejecutaremos en conjunto.
 
 Todo el material del curso (código y datos) está disponible en el repositorio de
-GitHub: [**enlace al repositorio**](URL_PENDIENTE) *(enlace por definir)*.
+GitHub: <https://github.com/alburezg/ALAP26_duelo>.
 
 > **Cómo usar este sitio.** Cada pestaña es un módulo. Los bloques de código
 > pueden copiarse y ejecutarse en RStudio. Todo el texto está en español; el
@@ -74,6 +74,11 @@ GitHub: [**enlace al repositorio**](URL_PENDIENTE) *(enlace por definir)*.
 ## Soluciones
 
 ```{r child = "soluciones.Rmd"}
+```
+
+## Datos
+
+```{r child = "datos.Rmd"}
 ```
 
 ## Bibliografía
