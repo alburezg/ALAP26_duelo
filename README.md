@@ -1,7 +1,7 @@
 # Escuela ALAP 2026 — Demografía del parentesco con énfasis en estimaciones de duelo
 
 Materiales del taller de la Escuela de la Asociación Latinoamericana de Población
-(ALAP), San José, Costa Rica, 26–28 de agosto de 2026.
+(ALAP), San José, Costa Rica, 24–25 de agosto de 2026.
 
 - **Repositorio:** <https://github.com/alburezg/ALAP26_duelo>
 - **Sitio web del curso:** <https://alburezg.github.io/ALAP26_duelo/>
