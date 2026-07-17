@@ -110,7 +110,17 @@ Ejecutamos la función en intervalos de 10 años entre 1950 y 2020. (Como el pas
 de recuperación de parientes es lento, lo calculamos una vez y guardamos el
 resultado.)
 
-```{r m6-run}
+```{r m6-run-shown, eval=FALSE}
+# Estimar la pérdida de parientes cada 10 años entre 1950 y 2020 y guardarla
+# (el paso de recuperación de parientes es lento; se corre una sola vez).
+kinloss_data <- bind_rows(lapply(
+  seq(1950, 2020, by = 10),
+  function(y) getKinLoss(year_of_interest = y, opop = opop, omar = omar)
+))
+saveRDS(kinloss_data, "data/socsim_kinloss.rds")
+```
+
+```{r m6-run, echo=FALSE}
 archivo_kinloss <- "data/socsim_kinloss.rds"
 
 if (!file.exists(archivo_kinloss)) {
@@ -121,8 +131,11 @@ if (!file.exists(archivo_kinloss)) {
   saveRDS(kinloss_data, archivo_kinloss)
 }
 kinloss_data <- readRDS(archivo_kinloss)
+```
 
-# Etiquetas legibles y orden de los tipos de pariente
+Añadimos etiquetas legibles y un orden a los tipos de pariente:
+
+```{r m6-labels}
 kinloss_data <- kinloss_data %>%
   mutate(
     kintype = recode(kintype,
@@ -147,8 +160,8 @@ kinloss_data %>%
   geom_line(linewidth = 1) +
   scale_x_continuous(breaks = seq(1950, 2020, by = 10)) +
   labs(
-    x = "Año", y = "Mujeres de 25-39 años que pierden un familiar (%)",
-    colour = "Tipo de familiar"
+    x = "Año", y = "Mujeres de 25-39 años que pierden un pariente (%)",
+    colour = "Tipo de pariente"
   ) +
   theme_bw()
 ```
@@ -161,7 +174,7 @@ kinloss_data %>%
   geom_line(linewidth = 1) +
   scale_x_continuous(breaks = seq(1950, 2020, by = 10)) +
   labs(
-    x = "Año", y = "Mujeres de 25-39 años con un familiar vivo el año anterior (%)",
+    x = "Año", y = "Mujeres de 25-39 años con un pariente vivo el año anterior (%)",
     colour = "Tipo de pariente"
   ) +
   theme_bw()

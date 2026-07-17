@@ -37,11 +37,11 @@ library(arrow)
 #### 4.1 Elegir un país y preparar los insumos {#m4-pais}
 
 Elegimos un país mediante su código ISO3 (véase `data/countries.csv`). Aquí
-usamos **Guatemala** (`GTM`) como ejemplo; cambie el código por el país que
-prefiera.
+usamos **Costa Rica** (`CRI`) como ejemplo —el mismo país que se resuelve paso a
+paso en la pestaña **Soluciones**—; cambie el código por el país que prefiera.
 
 ```{r m4-load}
-iso <- "GTM" # <-- cambie aquí su país
+iso <- "CRI" # <-- cambie aquí su país
 pais <- read_parquet(file.path("data/wpp_latam", paste0("wpp_", iso, ".parquet")))
 glimpse(pais)
 ```
@@ -97,41 +97,32 @@ head(qx_kin)
 #### 4.3 Generar la estructura de parentesco del país {#m4-kinship}
 
 Corremos el modelo de parentesco (como en los Módulos 2 y 3) para el país
-elegido, con salida por período y para ambos sexos de Focal.
+elegido, con salida por período y para ambos sexos de Focal. Igual que en el
+Módulo 2, lo corremos **para Focal mujer** y **copiamos** el resultado para Focal
+hombre (por eficiencia; normalmente correríamos `kin2sex()` de nuevo con
+`sex_focal = "m"`).
 
-> **Atención:** este paso tarda **~15 minutos**. Igual que en el Módulo 2, lo
-> calculamos una sola vez y lo guardamos; si el archivo ya existe, solo lo
-> leemos.
+> **Atención:** este paso tarda **varios minutos**. El siguiente bloque se muestra
+> pero **no se ejecuta** al compilar el sitio; córralo usted en su análisis y
+> guarde el resultado (por ejemplo con `write_parquet()`) para no repetirlo.
 
 ```{r m4-kin, eval=FALSE}
-archivo_kin <- file.path("data", paste0("kin_", iso, ".parquet"))
+# Correr el modelo para Focal mujer y copiarlo para Focal hombre.
+kin_f <- kin2sex(
+  pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
+  time_invariant = FALSE,
+  output_period = 1990:2020,
+  output_kin = c("d", "m", "s", "gm", "gd", "a", "n", "c"),
+  sex_focal = "f",
+  birth_female = 0.5
+)
 
-if (!file.exists(archivo_kin)) {
-  # kin2sex corre para un sexo de Focal; lo llamamos para mujeres y hombres
-  kin_f <- kin2sex(
-    pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
-    time_invariant = FALSE,
-    output_period = 1990:2020,
-    output_kin = c("c", "d", "gd", "gm", "m", "n", "a", "s"),
-    sex_focal = "f"
-  )
-  kin_m <- kin2sex(
-    pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
-    time_invariant = FALSE,
-    output_period = 1990:2020,
-    output_kin = c("c", "d", "gd", "gm", "m", "n", "a", "s"),
-    sex_focal = "m"
-  )
-  kin <- bind_rows(
-    as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "f"),
-    as_tibble(kin_m$kin_full) %>% mutate(sex_focal = "m")
-  ) %>%
-    transmute(year, sex_focal, age_focal, kin, sex_kin, age_kin, living) %>%
-    filter(living > 0)
-  write_parquet(kin, archivo_kin)
-}
-
-kin <- read_parquet(archivo_kin)
+kin <- bind_rows(
+  as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "f"),
+  as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "m")
+) %>%
+  transmute(year, sex_focal, age_focal, kin, sex_kin, age_kin, living) %>%
+  filter(living > 0)
 ```
 
 #### 4.4 Ejercicio: replicar las cuatro medidas {#m4-ejercicio}

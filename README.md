@@ -44,8 +44,8 @@ rmarkdown::render("index.Rmd")
   (Acosta et al. 2026): tasas demográficas (`col_demo_1950_2018.parquet`),
   muertes por homicidio (`col_homicidios_1985_2018.parquet`), inmigrantes y
   totales de homicidios. La estructura de parentesco (`col_kin_1985_2018.parquet`)
-  **no se versiona**: es una salida del modelo que el Módulo 3 genera a partir de
-  esas tasas la primera vez que se ejecuta y luego reutiliza (caché).
+  **no se versiona**: es una salida del modelo que el Módulo 2 genera a partir de
+  esas tasas la primera vez que se ejecuta y luego reutiliza (caché) en el Módulo 3.
 
 La documentación completa de cada insumo (contenido, columnas, fuente y
 referencia) está en la pestaña **Datos** del sitio.

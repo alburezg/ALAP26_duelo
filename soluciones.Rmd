@@ -1,4 +1,4 @@
-### Soluciones · ejercicio del Módulo 4 (resuelto para Costa Rica) {#soluciones}
+### Soluciones · ejercicio del Módulo 4 (resuelto para Costa Rica) {#sol}
 
 Esta pestaña resuelve, paso a paso y con código comentado, el ejercicio del
 Módulo 4 para **Costa Rica**, usando **solo datos del WPP** y el archivo de tasas
@@ -58,7 +58,7 @@ qx_kin <- read_csv("data/homicide_mortality_rates.csv", show_col_types = FALSE) 
 
 # Etiquetas y grupos de familia
 etiquetas_kin <- c(
-  m = "Madres y padres", d = "Hijas e hijos", s = "Hermanas y hermanos",
+  d = "Hijas e hijos", m = "Madres y padres", s = "Hermanas y hermanos",
   gm = "Abuelas y abuelos", gd = "Nietas y nietos", a = "Tías y tíos",
   n = "Sobrinas y sobrinos", c = "Primas y primos"
 )
@@ -66,8 +66,9 @@ parientes_cercanos <- c("d", "m", "s")
 parientes_extendidos <- c("gm", "gd", "a", "n", "c")
 ```
 
-Corremos el modelo de parentesco para el país (`kin2sex` para Focal mujer y
-hombre). Tarda ~10 min; lo calculamos una vez, lo guardamos y lo reutilizamos.
+Corremos el modelo de parentesco para el país: `kin2sex` para Focal **mujer** y
+copiamos el resultado para Focal hombre (por eficiencia, como en el Módulo 2).
+Tarda unos minutos; lo calculamos una vez, lo guardamos y lo reutilizamos (caché).
 
 ```{r sol-kin}
 reshape_wpp <- function(dat, variable, which_sex) {
@@ -90,19 +91,16 @@ if (!file.exists(archivo_kin)) {
   nf <- reshape_wpp(pais, "pop", "f")
   nm <- reshape_wpp(pais, "pop", "m")
 
+  # Correr el modelo para Focal mujer y copiarlo para Focal hombre.
   kin_f <- kin2sex(
     pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
     time_invariant = FALSE, output_period = 1990:anio_final,
-    output_kin = c("c", "d", "gd", "gm", "m", "n", "a", "s"), sex_focal = "f"
-  )
-  kin_m <- kin2sex(
-    pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
-    time_invariant = FALSE, output_period = 1990:anio_final,
-    output_kin = c("c", "d", "gd", "gm", "m", "n", "a", "s"), sex_focal = "m"
+    output_kin = c("d", "m", "s", "gm", "gd", "a", "n", "c"),
+    sex_focal = "f", birth_female = 0.5
   )
   kin <- bind_rows(
     as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "f"),
-    as_tibble(kin_m$kin_full) %>% mutate(sex_focal = "m")
+    as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "m")
   ) %>%
     transmute(year, sex_focal, age_focal, kin, sex_kin, age_kin, living) %>%
     filter(living >= 1e-6)

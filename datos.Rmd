@@ -1,4 +1,4 @@
-### Datos del taller {#datos}
+### Datos del taller {#dat}
 
 Esta pestaña documenta **todos los insumos** que usamos a lo largo del taller:
 qué contiene cada archivo, sus columnas, de dónde viene y cómo citarlo o
@@ -77,9 +77,8 @@ Kinship* [@acosta_weaponizing_2026]. Están en `data/colombia/`.
 | Archivo | Descripción | Columnas |
 |---|---|---|
 | [`col_demo_1950_2018.parquet`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/colombia/col_demo_1950_2018.parquet) | Tasas demográficas colombianas 1950–2018: insumos del modelo de parentesco y base para el duelo. | `year`, `sex`, `age`, `fx` (fecundidad), `px` (supervivencia), `nx` (población usada como insumo del modelo), `pop` (población), `ax` (fracción del último año de vida, convierte `mx`→`qx`) |
-| [`col_homicidios_1985_2018.parquet`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/colombia/col_homicidios_1985_2018.parquet) | Muertes por homicidio relacionadas con el conflicto, por año, sexo y edad de la víctima (1985–2018). Solo homicidios (se excluyen las desapariciones forzadas). | `year`, `sex`, `age`, `dx` (número de muertes) |
+| [`col_homicidios_1985_2018.parquet`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/colombia/col_homicidios_1985_2018.parquet) | Muertes por homicidio relacionadas con el conflicto, por año, sexo y edad de la víctima (1985–2018). Solo homicidios (se excluyen las desapariciones forzadas). Su suma sobre edad y sexo da el total del conflicto (~618 000), denominador de los multiplicadores de duelo. | `year`, `sex`, `age`, `dx` (número de muertes) |
 | [`col_inmigrantes_2018.parquet`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/colombia/col_inmigrantes_2018.parquet) | Proporción de inmigrantes por sexo y edad (censo 2018). Se excluyen del riesgo de duelo porque no estuvieron expuestos al conflicto. | `sex`, `age`, `imm_r` (proporción inmigrante) |
-| [`col_homicidios_totales.csv`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/colombia/col_homicidios_totales.csv) | Número total estimado de homicidios del conflicto (estimación puntual por sistemas múltiples). | `violation`, `n_muertes` |
 
 **Fuente y referencia.** Acosta, E., Alburez-Gutierrez, D., Gargiulo, M., &
 Torres, C. (2026). *Weaponizing Kinship: A Demographic Analysis of Bereavement in
@@ -113,9 +112,8 @@ crea la primera vez que se ejecuta y luego reutiliza (caché). Aparecen en el
 
 | Archivo | Se genera en | Descripción |
 |---|---|---|
-| `data/colombia/col_kin_1985_2018.parquet` | Módulo 3 | Estructura de parentesco de Colombia (salida de `kin2sex`), ~21 MB. |
-| `data/kin_col_2018.rds` | Módulo 2 | Modelo de parentesco de Colombia para 2018. |
-| `data/kin_<ISO3>.parquet` | Módulo 4 / Soluciones | Estructura de parentesco del país elegido. |
+| `data/colombia/col_kin_1985_2018.parquet` | Módulo 2 (lo reutiliza el Módulo 3) | Estructura de parentesco de Colombia (salida de `kin2sex`), ~21 MB. |
+| `data/kin_<ISO3>.parquet` | Soluciones (Módulo 4) | Estructura de parentesco del país elegido. |
 | `data/socsim_resultados.rds` | Módulo 5 | Población (`.opop`) y matrimonios (`.omar`) simulados. |
 | `data/socsim_kinloss.rds` | Módulo 6 | Pérdida y disponibilidad de parientes estimadas de la simulación. |
 | `rates/`, `presim.opop`, `presim.omar`, `sim_results_*/` | Módulos 5–6 | Archivos intermedios de SOCSIM. |

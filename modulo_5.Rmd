@@ -30,12 +30,11 @@ library(arrow)
 
 #### 5.1 Instalación {#m5-instalacion}
 
-Instala la versión de desarrollo de `rsocsim` desde GitHub. Si ya lo tenías,
-desinstálalo y vuelve a instalarlo para asegurar la versión correcta.
+`rsocsim` ya se instaló desde CRAN en el Módulo 1. Si necesitas instalarlo aquí,
+el comando es el mismo:
 
 ```{r m5-install, eval=FALSE}
-# remove.packages("rsocsim")
-remotes::install_github("MPIDR/rsocsim", ref = "v1.5.9")
+install.packages("rsocsim")
 ```
 
 #### 5.2 ¿Qué es SOCSIM? {#m5-socsim}
@@ -111,7 +110,21 @@ una estructura por edad estable), y luego un segmento por año hasta 2023.
 > **Tiempo de cómputo.** La simulación tarda algunos minutos. La corremos una vez
 > y guardamos los resultados; si ya existen, solo los cargamos.
 
-```{r m5-run, results='hide'}
+```{r m5-run-shown, eval=FALSE}
+folder <- getwd()
+supfile <- "socsim_Colombia.sup"
+seed <- "101224"
+
+# Correr la microsimulación y leer sus archivos de salida (población y matrimonios)
+rsocsim::socsim(folder, supfile, seed, process_method = "future")
+opop <- rsocsim::read_opop(folder = folder, supfile = supfile, seed = seed, suffix = "", fn = NULL)
+omar <- rsocsim::read_omar(folder = folder, supfile = supfile, seed = seed, suffix = "", fn = NULL)
+
+# Guardar los resultados para reutilizarlos (la simulación tarda varios minutos)
+saveRDS(list(opop = opop, omar = omar), "data/socsim_resultados.rds")
+```
+
+```{r m5-run, echo=FALSE, results='hide'}
 folder <- getwd()
 supfile <- "socsim_Colombia.sup"
 seed <- "101224"
@@ -182,6 +195,13 @@ bind_rows(
   ) +
   theme_bw()
 ```
+
+**¿Qué vemos aquí?** Las curvas recuperan los patrones demográficos esperados: la
+fecundidad dibuja la clásica campana concentrada en las edades reproductivas y se
+va desplazando entre 1950 y 2020, mientras que la mortalidad muestra su forma en
+"J" (alta en la infancia, mínima en la juventud y creciente en la vejez). Que la
+simulación reproduzca estas formas es la primera señal de que funcionó; en la
+sección siguiente lo verificamos comparándola con las tasas de entrada del WPP.
 
 #### 5.7 Comparar SOCSIM con el WPP {#m5-comparar}
 

@@ -6,6 +6,9 @@ date: "Actualizado: `r Sys.Date()`"
 output:
   html_document:
     toc: false
+    self_contained: true
+    mathjax: null
+    pandoc_args: ["--mathml"]
     theme: readable
     highlight: pygments
     css: styles.css

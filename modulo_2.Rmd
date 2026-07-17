@@ -22,7 +22,6 @@ library(arrow)
 - [2.4 Estimación con `kin2sex()`](#m2-kin2sex)
 - [2.5 Número de parientes vivos por edad de Focal](#m2-vivos)
 - [2.6 Distribución por edad de los parientes](#m2-distribucion)
-- [2.7 DemoKin no acepta combinar cohorte y período](#m2-error)
 
 #### 2.1 El modelo de dos sexos y variable en el tiempo {#m2-modelo}
 
@@ -116,6 +115,13 @@ Este taller combina dos extensiones del modelo básico:
 >
 > En el Módulo 3 necesitamos la mirada **por período** (`output_period`), porque
 > estimamos el duelo de toda la población en cada año.
+
+El modelo variable en el tiempo aprovecha justamente la estructura
+Edad-Periodo-Cohorte (APC): una persona y sus parientes atraviesan tasas
+distintas a lo largo de su vida, siguiendo una **diagonal** en el diagrama de
+Lexis (edad × año). Período y cohorte son dos formas de recortar ese plano:
+
+![Dimensiones Edad-Periodo-Cohorte del modelo de parentesco. Fuente: Caswell (2019).](apc.png)
 
 #### 2.2 El diagrama de parentesco: cómo se eligen los parientes {#m2-diagrama}
 
@@ -217,11 +223,9 @@ col %>%
   theme_bw()
 ```
 
-El modelo variable en el tiempo aprovecha justamente esta estructura
-Edad-Periodo-Cohorte: una persona y sus parientes atraviesan diferentes tasas a
-lo largo de su vida (una **diagonal** en el diagrama de Lexis).
-
-![Dimensiones Edad-Periodo-Cohorte del modelo de parentesco. Fuente: Caswell (2019).](apc.png)
+En esta superficie, una cohorte de Focales avanza en diagonal (envejece un año
+por cada año calendario), atravesando las tasas cambiantes que vimos en la
+sección 2.1.
 
 Los datos están en formato *tidy* (una fila por edad-sexo-año). La siguiente
 función auxiliar los convierte al formato **matriz** (edad × año) que espera
@@ -266,61 +270,136 @@ fm <- ff
 #### 2.4 Estimación con `kin2sex()` {#m2-kin2sex}
 
 Ejecutamos el modelo de dos sexos variable en el tiempo pidiendo la salida por
-**período** para el año **2018**. Con `output_kin` elegimos los tipos de
-pariente de interés: hijas/os (`d`), madres/padres (`m`), abuelas/os (`gm`),
-hermanas/os (`s`), primas/os (`c`) y tías/os (`a`).
+**período** para **todos los años 1985–2018** (el rango que necesitaremos en el
+Módulo 3). Con `output_kin` elegimos los tipos de pariente de interés: hijas/os
+(`d`), madres/padres (`m`), hermanas/os (`s`), abuelas/os (`gm`), nietas/os
+(`gd`), tías/os (`a`), sobrinas/os (`n`) y primas/os (`c`).
 
-> **Tiempo de cómputo.** Este modelo proyecta toda la serie 1950–2023 para ambos
-> sexos, por lo que puede tardar **varios minutos**. Para no repetir el cálculo
-> cada vez, lo guardamos la primera vez y lo reutilizamos después: si el archivo
-> ya existe, simplemente lo leemos.
+> **Un solo modelo para Colombia.** Correr `kin2sex()` es el paso costoso (tarda
+> varios minutos); lo que tarda es *ajustar el modelo*, no el número de años que
+> se piden en la salida. Por eso lo corremos **una sola vez aquí, para todos los
+> años**, guardamos el resultado en un archivo y lo **reutilizamos en el Módulo
+> 3** (así no repetimos el cálculo). Dos atajos más para agilizar el taller:
+>
+> - Corremos el modelo solo para Focal **mujer** y **copiamos** el resultado para
+>   Focal hombre. Normalmente correríamos `kin2sex()` de nuevo con
+>   `sex_focal = "m"`, pero la red de parientes es muy parecida entre Focales de
+>   uno u otro sexo y así ahorramos la mitad del tiempo.
+> - Guardamos el resultado en un único archivo (`col_kin_1985_2018.parquet`) y, si
+>   ya existe, simplemente lo leemos (una "caché"). Así cada módulo se puede
+>   ejecutar por separado sin volver a ajustar el modelo.
 
-```{r m2-run}
-archivo_modelo <- "data/kin_col_2018.rds"
+Antes de correrlo, conviene entender cada **argumento** de `kin2sex()`:
 
-if (!file.exists(archivo_modelo)) {
-  col_2sex <- kin2sex(
-    pf = pf, pm = pm,
-    ff = ff, fm = fm,
-    nf = nf, nm = nm,
+- `pf`, `pm`, `ff`, `fm`, `nf`, `nm`: los seis insumos matriciales (edad × año)
+  que preparamos arriba —supervivencia, fecundidad y población de mujeres (`*f`)
+  y hombres (`*m`).
+- `time_invariant = FALSE`: usa tasas **variables en el tiempo** (una matriz por
+  año), no un solo año fijo. Es lo que activa el modelo de la sección 2.1.
+- `output_period = 1985:2018`: pide la salida **por período** para esos años (la
+  mirada transversal que necesita el Módulo 3).
+- `output_kin`: los tipos de pariente de interés, con los códigos de la sección
+  2.2.
+- `sex_focal = "f"`: el sexo de Focal (aquí, mujer).
+- `birth_female = 0.5`: la proporción de nacimientos que son niñas (razón de sexo
+  al nacer); DemoKin la usa para repartir los nacimientos entre hijas e hijos.
+
+El código que ajusta el modelo y guarda el archivo es este:
+
+```{r m2-run-shown, eval=FALSE}
+# Correr el modelo UNA vez, para Focal MUJER y todos los años (paso costoso).
+kin_f <- kin2sex(
+  pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
+  time_invariant = FALSE,
+  output_period = 1985:2018,
+  output_kin = c("d", "m", "s", "gm", "gd", "a", "n", "c"),
+  sex_focal = "f",
+  birth_female = 0.5
+)
+
+# Reutilizar (copiar) el resultado para Focal HOMBRE en vez de correr un
+# segundo modelo. Guardamos ambos sexos en un solo objeto y en un solo archivo.
+kin <- bind_rows(
+  as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "f"),
+  as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "m")
+) %>%
+  transmute(
+    year = as.integer(year), sex_focal,
+    age_focal = as.integer(age_focal), kin, sex_kin,
+    age_kin = as.integer(age_kin), living
+  ) %>%
+  filter(living >= 1e-6) # descartar celdas prácticamente vacías (archivo compacto)
+
+write_parquet(kin, "data/colombia/col_kin_1985_2018.parquet")
+```
+
+```{r m2-run, echo=FALSE}
+archivo_kin <- "data/colombia/col_kin_1985_2018.parquet"
+
+if (!file.exists(archivo_kin)) {
+  kin_f <- kin2sex(
+    pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
     time_invariant = FALSE,
-    output_period = 2018,
-    output_kin = c("d", "m", "gm", "s", "c", "a"),
+    output_period = 1985:2018,
+    output_kin = c("d", "m", "s", "gm", "gd", "a", "n", "c"),
     sex_focal = "f",
     birth_female = 0.5
   )
-  saveRDS(col_2sex, archivo_modelo)
+  kin <- bind_rows(
+    as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "f"),
+    as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "m")
+  ) %>%
+    transmute(
+      year = as.integer(year), sex_focal,
+      age_focal = as.integer(age_focal), kin, sex_kin,
+      age_kin = as.integer(age_kin), living
+    ) %>%
+    filter(living >= 1e-6)
+  write_parquet(kin, archivo_kin)
 }
 
-col_2sex <- readRDS(archivo_modelo)
+kin <- read_parquet(archivo_kin)
 ```
 
-`kin2sex()` devuelve una lista con dos data frames:
+El objeto `kin` tiene una fila por año, sexo/edad de Focal y sexo/edad del
+pariente, con el número esperado de parientes vivos (`living`). La columna
+`sex_kin` (`"f"`/`"m"`) distingue el sexo del pariente: `kin = "d"`,
+`sex_kin = "m"` son los **hijos** de Focal; `kin = "m"`, `sex_kin = "m"` es el
+**padre**, etc.
 
-- `kin_full`: el detalle por edad de Focal **y** edad del pariente;
-- `kin_summary`: un resumen por edad de Focal (número de parientes vivos,
-  edad media, etc.).
-
-```{r m2-summary}
-col_2sex$kin_summary %>%
-  filter(age_focal == 50) %>%
-  head()
+```{r m2-glimpse}
+glimpse(kin)
 ```
 
-La columna adicional `sex_kin` (`"f"`/`"m"`) distingue el sexo del pariente:
-`kin = "d"`, `sex_kin = "m"` son los **hijos** de Focal; `kin = "m"`,
-`sex_kin = "m"` es el **padre**, etc.
+Para poner los resultados en español definimos una pequeña función que traduce
+los códigos de pariente a etiquetas legibles (equivale a `rename_kin()` de
+DemoKin, que las devuelve en inglés):
+
+```{r m2-etiquetas}
+etiquetas_kin <- c(
+  d = "Hijas e hijos", m = "Madres y padres", s = "Hermanas y hermanos",
+  gm = "Abuelas y abuelos", gd = "Nietas y nietos", a = "Tías y tíos",
+  n = "Sobrinas y sobrinos", c = "Primas y primos"
+)
+
+renombrar_kin <- function(df) {
+  df %>% mutate(kin_label = factor(etiquetas_kin[kin], levels = etiquetas_kin))
+}
+```
 
 #### 2.5 Número de parientes vivos por edad de Focal {#m2-vivos}
 
 Graficamos cuántos parientes de cada tipo y sexo tiene una mujer colombiana
-promedio a cada edad, según las tasas de 2018. La función `rename_kin()` de
-DemoKin traduce los códigos a etiquetas legibles.
+promedio a cada edad, según las tasas de **2018**. Sumamos `living` sobre la edad
+del pariente para obtener el total (`count_living`) por tipo y sexo del pariente:
 
 ```{r m2-plot-vivos, fig.height=6}
-col_2sex$kin_summary %>%
-  rename_kin(sex = "2sex") %>%
-  ggplot(aes(x = age_focal, y = count_living, colour = sex_kin)) +
+kin %>%
+  filter(sex_focal == "f", year == 2018) %>%
+  summarise(count_living = sum(living), .by = c(age_focal, kin, sex_kin)) %>%
+  renombrar_kin() %>%
+  mutate(sexo = if_else(sex_kin == "f", "Mujer", "Hombre")) %>%
+  ggplot(aes(x = age_focal, y = count_living, colour = sexo)) +
   geom_line(linewidth = 1) +
   facet_wrap(~kin_label, scales = "free_y") +
   labs(
@@ -334,13 +413,14 @@ col_2sex$kin_summary %>%
 ```
 
 Podemos verlo también como **composición** de la familia a lo largo de la vida.
-Aquí sumamos los parientes de ambos sexos (`sex_kin`) para obtener el total por
-tipo de pariente a cada edad de Focal:
+Aquí sumamos los parientes de ambos sexos para obtener el total por tipo de
+pariente a cada edad de Focal:
 
 ```{r m2-plot-area, fig.height=5}
-col_2sex$kin_summary %>%
-  rename_kin(sex = "2sex") %>%
-  summarise(count_living = sum(count_living), .by = c(age_focal, kin_label)) %>%
+kin %>%
+  filter(sex_focal == "f", year == 2018) %>%
+  summarise(count_living = sum(living), .by = c(age_focal, kin)) %>%
+  renombrar_kin() %>%
   ggplot(aes(x = age_focal, y = count_living, fill = kin_label)) +
   geom_area(colour = "black", linewidth = 0.2, alpha = 0.85) +
   labs(
@@ -351,35 +431,31 @@ col_2sex$kin_summary %>%
   theme_bw()
 ```
 
+**¿Qué vemos aquí?** La red no tiene un tamaño fijo: crece y se recompone con la
+edad de Focal. En la juventud predominan los parientes **ascendientes** (madres y
+padres, abuelas y abuelos) y los **hermanos**; hacia la adultez esos ascendientes
+van desapareciendo y ganan peso los **descendientes** (hijas e hijos, y más tarde
+nietas y nietos). Los parientes **extendidos** —tías/os y primas/os— son los más
+numerosos en casi todas las edades: es justamente esa abundancia la que, en el
+Módulo 3, amplificará el efecto de cada muerte sobre el duelo.
+
 #### 2.6 Distribución por edad de los parientes {#m2-distribucion}
 
-El objeto `kin_full` guarda la **distribución por edad** de cada tipo de pariente,
-no solo su total. Empecemos por las **hijas e hijos** de una Focal de 60 años en
-2018 (dónde se concentran sus edades, separadas por sexo):
+El objeto `kin` guarda la **distribución por edad** de cada tipo de pariente,
+no solo su total. Comparemos la distribución por edad de cuatro tipos de pariente
+de una Focal de 60 años en 2018 —hijas/os, hermanas/os, tías/os y primas/os—,
+cada uno en su propio panel (con escala vertical libre) y separado por sexo del
+pariente:
 
-```{r m2-plot-dist}
-col_2sex$kin_full %>%
-  rename_kin(sex = "2sex") %>%
-  filter(age_focal == 60, kin == "d") %>%
-  ggplot(aes(x = age_kin, y = living, colour = sex_kin)) +
-  geom_line(linewidth = 1) +
-  labs(
-    title = "Distribución por edad de hijas/os de una Focal de 60 años (2018)",
-    x = "Edad del pariente", y = "Número esperado", colour = "Sexo del pariente"
-  ) +
-  theme_bw()
-```
-
-Cada tipo de pariente tiene su propia distribución por edad. Comparémoslos en un
-gráfico **facetado** que agrega, junto a las hijas/os, otros tres tipos —
-hermanas/os, tías/os y primas/os — para la misma Focal de 60 años. Cada panel
-lleva su propia escala vertical (`scales = "free_y"`):
-
-```{r m2-plot-dist-facet, fig.height=6}
-col_2sex$kin_full %>%
-  rename_kin(sex = "2sex") %>%
-  filter(age_focal == 60, kin %in% c("d", "s", "a", "c")) %>%
-  ggplot(aes(x = age_kin, y = living, colour = sex_kin)) +
+```{r m2-plot-dist, fig.height=6}
+kin %>%
+  filter(
+    sex_focal == "f", year == 2018, age_focal == 60,
+    kin %in% c("d", "s", "a", "c")
+  ) %>%
+  renombrar_kin() %>%
+  mutate(sexo = if_else(sex_kin == "f", "Mujer", "Hombre")) %>%
+  ggplot(aes(x = age_kin, y = living, colour = sexo)) +
   geom_line(linewidth = 1) +
   facet_wrap(~kin_label, scales = "free_y") +
   labs(
@@ -395,22 +471,6 @@ concentran en edades adultas jóvenes; las **hermanas/os**, alrededor de la edad
 Focal; las **tías/os** en edades mayores (y son pocas, porque muchas ya han
 fallecido); y las **primas/os** se despliegan sobre un rango de edades amplio.
 
-#### 2.7 DemoKin no acepta combinar cohorte y período {#m2-error}
-
-`kin2sex()` produce **o** una salida por cohorte (`output_cohort`) **o** una por
-período (`output_period`), pero **no ambas a la vez**. Intentarlo produce un
-error:
-
-```{r m2-error, error=TRUE}
-kin2sex(
-  pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
-  time_invariant = FALSE,
-  output_cohort = 1960,
-  output_period = 2018,
-  sex_focal = "f", birth_female = 0.5
-)
-```
-
-Con esto tenemos todo lo necesario para el Módulo 3, donde combinaremos estas
-estructuras de parentesco con las muertes por el conflicto para estimar el
-**duelo a nivel poblacional**.
+Con esto tenemos todo lo necesario para el Módulo 3, donde combinaremos esta
+estructura de parentesco (`kin`) con las muertes por el conflicto para estimar
+el **duelo a nivel poblacional**.

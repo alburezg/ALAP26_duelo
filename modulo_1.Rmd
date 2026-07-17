@@ -76,9 +76,15 @@ remotes::install_github("IvanWilli/DemoKin")
 # Paquete de microsimulación (Módulos 5-6)
 install.packages("rsocsim")
 
-# Paquetes de manejo y visualización de datos
-install.packages(c("tidyverse", "arrow", "scales"))
+# Paquetes de manejo y visualización de datos usados en todos los módulos:
+#   tidyverse, arrow  -> manipulación de datos y lectura de .parquet
+#   scales            -> formato de ejes y etiquetas (Módulo 3)
+#   ggh4x, data.table -> facetas y manejo de datos de la microsimulación (5-6)
+install.packages(c("tidyverse", "arrow", "scales", "ggh4x", "data.table"))
 ```
+
+Con esto quedan instalados **todos** los paquetes que usaremos a lo largo del
+taller. Cada módulo carga con `library()` únicamente los que necesita.
 
 Cargamos los paquetes que usaremos en los laboratorios:
 
@@ -139,8 +145,9 @@ conflicto armado colombiano [@acosta_weaponizing_2026]. Los datos están en
 homicidios <- read_parquet("data/colombia/col_homicidios_1985_2018.parquet")
 glimpse(homicidios)
 
-# Total de homicidios estimados (denominador de los multiplicadores)
-read_csv("data/colombia/col_homicidios_totales.csv")
+# Total de homicidios del conflicto en el período, sumando sobre edad y sexo.
+# Es el denominador de los multiplicadores de duelo del Módulo 3.
+sum(homicidios$dx)
 ```
 
 > **Solo homicidios.** El artículo original también estima el duelo por

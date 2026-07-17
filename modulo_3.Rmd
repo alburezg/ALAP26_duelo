@@ -57,62 +57,58 @@ inmigrantes <- read_parquet(file.path(dcol, "col_inmigrantes_2018.parquet"))
 
 El cuarto insumo es la **estructura de parentesco** (`kin`): cuántos parientes
 vivos de cada tipo tiene una persona promedio, por año y por sexo/edad de Focal y
-del pariente. No es un dato externo, sino la **salida del modelo del Módulo 2**
-(de dos sexos y variable en el tiempo) aplicado a las tasas colombianas
-`demo`, con salida por período 1985–2018 y para Focal de ambos sexos.
+del pariente. No es un dato externo: es la **salida del modelo que ya ajustamos en
+el Módulo 2** (de dos sexos y variable en el tiempo), con salida por período
+1985–2018 y para Focal de ambos sexos.
 
-Como el cálculo tarda unos minutos, lo corremos **una sola vez**, guardamos el
-resultado en un archivo y lo reutilizamos: si el archivo ya existe, simplemente lo
-leemos (esa es nuestra "caché"). El código es el mismo `kin2sex()` del Módulo 2,
-generalizado a los ocho tipos de pariente y a los dos sexos de Focal:
+Para no volver a correr el modelo —que es el paso costoso— lo **reutilizamos**:
+leemos el archivo que guardó el Módulo 2. Si por alguna razón no existiera, el
+mismo bloque lo regenera, con los datos del WPP para Colombia y los mismos atajos
+del Módulo 2 (se corre para Focal mujer y se copia para Focal hombre):
 
-> **Nota sobre el período.** Para que el modelo corra rápido en el taller, aquí lo
-> iniciamos en **1950** (usando solo datos del WPP). El artículo original lo inicia
-> en 1900, incorporando mortalidad histórica anterior a 1950. Como DemoKin supone
-> una población estable antes del primer año (véase "condiciones de frontera" en el
-> Módulo 2), iniciar en 1950 da estimaciones de parentesco lejano algo **mayores**
-> que las publicadas; las cifras son, por tanto, cercanas pero no idénticas a las
-> del artículo.
+> **Nota sobre los insumos del parentesco.** La estructura de parentesco proviene
+> del modelo del Módulo 2, ajustado con las tasas del **WPP** para Colombia
+> (1950–2023). El artículo original usa tasas colombianas propias que arrancan en
+> 1900. Como DemoKin supone una población estable antes del primer año (véase
+> "condiciones de frontera", Módulo 2) y las tasas no son idénticas, nuestras
+> estimaciones de parentesco —sobre todo de parientes lejanos— son **cercanas pero
+> no idénticas** a las publicadas.
 
 ```{r m3-kin}
 archivo_kin <- file.path(dcol, "col_kin_1985_2018.parquet")
 
 if (!file.exists(archivo_kin)) {
-  # Pasar una tasa del formato tidy (una fila por edad-año) a matriz (edad x año)
-  a_matriz <- function(variable, sexo) {
-    demo %>%
-      filter(sex == sexo) %>%
-      select(age, year, valor = all_of(variable)) %>%
+  # Reconstruir el archivo (normalmente ya lo generó el Módulo 2).
+  col <- read_parquet("data/wpp_latam/wpp_COL.parquet")
+  reshape_wpp <- function(dat, variable, which_sex) {
+    dat %>%
+      filter(sex == which_sex) %>%
+      select(age, year, value = all_of(variable)) %>%
       arrange(age, year) %>%
-      pivot_wider(names_from = year, values_from = valor) %>%
+      pivot_wider(names_from = year, values_from = value) %>%
       select(-age) %>%
       as.matrix()
   }
 
-  # kin2sex corre para un sexo de Focal a la vez; lo llamamos para cada sexo
-  correr_kin <- function(sexo_focal) {
-    kin2sex(
-      pf = a_matriz("px", "f"), pm = a_matriz("px", "m"),
-      ff = a_matriz("fx", "f"), fm = a_matriz("fx", "m"),
-      nf = a_matriz("nx", "f"), nm = a_matriz("nx", "m"),
-      time_invariant = FALSE,
-      output_period = 1985:2018,
-      output_kin = c("c", "d", "gd", "gm", "m", "n", "a", "s"),
-      sex_focal = sexo_focal,
-      birth_female = 0.5
-    )$kin_full %>%
-      as_tibble() %>%
-      mutate(sex_focal = sexo_focal)
-  }
-
-  kin <- bind_rows(correr_kin("f"), correr_kin("m")) %>%
+  # Correr el modelo para Focal mujer y copiarlo para Focal hombre (eficiencia).
+  kin_f <- kin2sex(
+    pf = reshape_wpp(col, "px", "f"), pm = reshape_wpp(col, "px", "m"),
+    ff = reshape_wpp(col, "fx", "f"), fm = reshape_wpp(col, "fx", "f"),
+    nf = reshape_wpp(col, "pop", "f"), nm = reshape_wpp(col, "pop", "m"),
+    time_invariant = FALSE, output_period = 1985:2018,
+    output_kin = c("d", "m", "s", "gm", "gd", "a", "n", "c"),
+    sex_focal = "f", birth_female = 0.5
+  )
+  kin <- bind_rows(
+    as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "f"),
+    as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "m")
+  ) %>%
     transmute(
       year = as.integer(year), sex_focal,
       age_focal = as.integer(age_focal), kin, sex_kin,
       age_kin = as.integer(age_kin), living
     ) %>%
-    filter(living >= 1e-6) # descartar celdas prácticamente vacías
-
+    filter(living >= 1e-6)
   write_parquet(kin, archivo_kin)
 }
 
@@ -132,9 +128,15 @@ artículo (lo que llamamos familia *extendida* es lo que el artículo llama
 | **Familia cercana** ($\mathcal{C}$) | hijas/os, madres/padres, hermanas/os | `d`, `m`, `s` |
 | **Familia extendida** ($\mathcal{D}$) | abuelas/os, nietas/os, tías/os, sobrinas/os, primas/os | `gm`, `gd`, `a`, `n`, `c` |
 
+El siguiente diagrama sitúa a cada tipo de pariente respecto de Focal y lo colorea
+según pertenezca a la familia **cercana** (rosa) o **extendida** (azul). Estos son
+los mismos colores que usaremos en todas las figuras del módulo:
+
+![Parientes considerados en el análisis, coloreados según sean familia cercana (rosa) o extendida (azul). Adaptado de @acosta_weaponizing_2026.](diagrama_familia.png)
+
 ```{r m3-labels}
 etiquetas_kin <- c(
-  m = "Madres y padres", d = "Hijas e hijos", s = "Hermanas y hermanos",
+  d = "Hijas e hijos", m = "Madres y padres", s = "Hermanas y hermanos",
   gm = "Abuelas y abuelos", gd = "Nietas y nietos", a = "Tías y tíos",
   n = "Sobrinas y sobrinos", c = "Primas y primos"
 )
@@ -680,3 +682,16 @@ piramide %>%
 > (número medio de homicidios) en lugar de las 1000 réplicas de la estimación por
 > sistemas múltiples del artículo. Por ello los valores son muy parecidos, pero
 > no idénticos, a los publicados en @acosta_weaponizing_2026.
+
+#### Recapitulación {#m3-recap}
+
+En este módulo partimos de la estructura de parentesco del Módulo 2 y las muertes
+por homicidio para reproducir las **cuatro medidas clave** del artículo: la
+**incidencia** anual (duelos nuevos por año), los **multiplicadores** (personas en
+duelo por muerte), la **prevalencia acumulada** a 2018 (el stock de personas en
+duelo) y su **distribución por edad** (la pirámide). El hilo conductor fue siempre
+el mismo: el **tamaño** de la red de parentesco —sobre todo la familia extendida—
+amplifica el efecto demográfico de cada muerte.
+
+En el **Módulo 4** te toca a ti: repetirás exactamente estos cuatro pasos para el
+país que elijas, reutilizando el código que acabamos de escribir.
