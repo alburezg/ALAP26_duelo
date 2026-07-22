@@ -167,7 +167,7 @@ en las filas** (0–100) y los **años en las columnas**:
 Cargamos los datos del WPP para Colombia que preparamos en el Módulo 1:
 
 ```{r m2-load}
-col <- read_parquet("data/wpp_latam/wpp_COL.parquet")
+col <- read_parquet("data/wpp_latam_1950_2023/wpp_COL.parquet")
 head(col)
 ```
 

@@ -104,24 +104,18 @@ Los modelos de parentesco necesitan tres insumos por edad, sexo y año:
 **supervivencia**, **fecundidad** y **población**. Preparamos estos insumos a
 partir del [World Population Prospects 2024](https://population.un.org/wpp/) de
 las Naciones Unidas para ~25 países de América Latina y el Caribe (1950–2023) y
-los guardamos comprimidos en `data/wpp_latam_1950_2023.zip` (un archivo
-`.parquet` por país).
-
-Descomprimimos el archivo una vez:
-
-```{r m1-unzip}
-dir.create("data/wpp_latam", showWarnings = FALSE)
-unzip("data/wpp_latam_1950_2023.zip", exdir = "data/wpp_latam")
+los guardamos en el folder `data/wpp_latam_1950_2023`, que contiene un archivo 
+`.parquet` por país.
 
 # Países disponibles
-countries <- read_csv("data/wpp_latam/countries.csv")
+countries <- read_csv("data/countries.csv")
 countries
 ```
 
 Cada país es un archivo `wpp_<ISO3>.parquet`. Veamos el de Colombia:
 
 ```{r m1-wpp-col}
-col <- read_parquet("data/wpp_latam/wpp_COL.parquet")
+col <- read_parquet("data/wpp_latam_1950_2023/wpp_COL.parquet")
 glimpse(col)
 ```
 
