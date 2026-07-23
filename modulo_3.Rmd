@@ -79,7 +79,7 @@ archivo_kin <- file.path(dcol, "col_kin_1985_2018.parquet")
 
 if (!file.exists(archivo_kin)) {
   # Reconstruir el archivo (normalmente ya lo generó el Módulo 2).
-  col <- read_parquet("data/wpp_latam/wpp_COL.parquet")
+  col <- read_parquet("data/wpp_latam_1950_2023/wpp_COL.parquet")
   reshape_wpp <- function(dat, variable, which_sex) {
     dat %>%
       filter(sex == which_sex) %>%

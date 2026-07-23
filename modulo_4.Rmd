@@ -14,12 +14,9 @@ El flujo de trabajo es el mismo del Módulo 3, con dos cambios:
 2. La mortalidad de referencia son **tasas específicas por homicidio** del país
    elegido.
 
-> **Datos de mortalidad por homicidio.** El archivo con las tasas de mortalidad
-> por homicidio específicas por país todavía no está disponible; se distribuirá
-> más adelante. **Mientras tanto, usaremos la mortalidad de todas las causas del
-> WPP como marcador de posición (*placeholder*)**, de modo que todo el código
-> pueda ejecutarse de principio a fin. Cuando lleguen las tasas por homicidio,
-> solo habrá que reemplazar ese insumo.
+> **Datos de mortalidad por homicidio.** Estas tasas por homicidio fueron 
+> calculadas a partir de estimaciones de la Global Burden of Disease 2023 para 
+> 20 países de la región..
 
 ```{r m4-libs, message=FALSE}
 library(tidyverse)
@@ -42,7 +39,12 @@ paso en la pestaña **Soluciones**—; cambie el código por el país que prefie
 
 ```{r m4-load}
 iso <- "CRI" # <-- cambie aquí su país
-pais <- read_parquet(file.path("data/wpp_latam", paste0("wpp_", iso, ".parquet")))
+pais <- open_dataset("data/wpp_latam_1950_2023/", format = "parquet") |>
+  filter(iso3 == iso) |>
+  collect() |> 
+  as_tibble()
+
+pais
 glimpse(pais)
 ```
 
@@ -74,13 +76,6 @@ por homicidio** del conflicto colombiano. Para el ejercicio usamos un archivo de
 **tasas de mortalidad por homicidio** por país, año, sexo y edad:
 `data/homicide_mortality_rates.csv` (columnas `iso3`, `year`, `sex`, `age`, `mx`).
 
-> **Marcador de posición.** El archivo definitivo de tasas por homicidio aún no
-> está disponible. Por ahora, `homicide_mortality_rates.csv` contiene un **marcador
-> de posición**: la mortalidad por **todas las causas** del WPP. Tiene la misma
-> estructura y nombre que tendrá el archivo real, de modo que **cuando lleguen las
-> tasas por homicidio solo se reemplaza este archivo y el código no cambia**. (Ojo:
-> con mortalidad por todas las causas los resultados reflejan el duelo *total*, no
-> solo el violento.)
 
 Leemos el archivo, lo filtramos para el país elegido y convertimos la tasa `mx`
 en probabilidad `qx`:
