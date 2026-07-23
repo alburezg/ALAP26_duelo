@@ -5,13 +5,12 @@ Módulo 4 para **Costa Rica**, usando **solo datos del WPP** y el archivo de tas
 de mortalidad por homicidio. Es la plantilla que puede adaptar a **su país**:
 basta con cambiar el código ISO3.
 
-> **Marcador de posición.** Costa Rica no tuvo un conflicto como el colombiano y
-> aún no disponemos de tasas de homicidio por edad. Por eso aquí usamos, como
-> sustituto, la **mortalidad por todas las causas** del WPP
-> (`data/homicide_mortality_rates.csv`). Los resultados reflejan entonces el
-> duelo por *toda* la mortalidad (no solo la violenta) y sirven para ilustrar el
-> mecanismo; cuando dispongamos de las tasas reales de homicidio, se reemplaza ese
-> archivo y el código no cambia.
+> **Tasas de mortalidad por homicidio.** Como referencia de mortalidad violenta
+> usamos las **tasas específicas por homicidio** del país
+> (`data/homicide_mortality_rates.csv`), calculadas a partir de estimaciones de la
+> Global Burden of Disease 2023 para 20 países de la región. Los resultados
+> reflejan entonces el duelo por mortalidad **violenta**. Estas tasas cubren
+> 2000–2023, por lo que el análisis del duelo se concentra en ese período.
 
 **Contenido:**
 
@@ -32,15 +31,14 @@ library(DemoKin)
 
 ```{r sol-setup}
 iso <- "CRI" # <- cambie por su país
-anio_final <- 2020 # último año del análisis
-
-if (!dir.exists("data/wpp_latam")) {
-  dir.create("data/wpp_latam")
-  unzip("data/wpp_latam_1950_2023.zip", exdir = "data/wpp_latam")
-}
+anio_inicial <- 2000 # primer año con datos de homicidio (GBD)
+anio_final <- 2023 # último año del análisis (último año disponible)
 
 # Datos WPP del país (supervivencia, fecundidad, población)
-pais <- read_parquet(file.path("data/wpp_latam", paste0("wpp_", iso, ".parquet")))
+pais <- open_dataset("data/wpp_latam_1950_2023/", format = "parquet") |>
+  filter(iso3 == iso) |>
+  collect() |>
+  as_tibble()
 
 # Población focal y exposición (sin ajuste por inmigrantes en este ejemplo)
 pop_focal <- pais %>% transmute(year, sex_focal = sex, age_focal = age, pop)
@@ -49,7 +47,7 @@ exposicion <- pais %>%
   transmute(sex_focal = sex, age_focal = age, exposicion = pop)
 poblacion <- sum(exposicion$exposicion)
 
-# Tasas de mortalidad por homicidio (marcador de posición = todas las causas).
+# Tasas de mortalidad por homicidio (GBD 2023, 2000-2023).
 # Convertimos la tasa mx en probabilidad qx (ax = 0.5).
 qx_kin <- read_csv("data/homicide_mortality_rates.csv", show_col_types = FALSE) %>%
   filter(iso3 == iso) %>%
@@ -92,9 +90,10 @@ if (!file.exists(archivo_kin)) {
   nm <- reshape_wpp(pais, "pop", "m")
 
   # Correr el modelo para Focal mujer y copiarlo para Focal hombre.
+  # Acotamos la salida a los años con datos de homicidio (2000-2023).
   kin_f <- kin2sex(
     pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
-    time_invariant = FALSE, output_period = 1990:anio_final,
+    time_invariant = FALSE, output_period = anio_inicial:anio_final,
     output_kin = c("d", "m", "s", "gm", "gd", "a", "n", "c"),
     sex_focal = "f", birth_female = 0.5
   )
@@ -153,7 +152,7 @@ incidencia_familia %>%
     "Familia cercana" = "#b56576", "Familia extendida" = "#355070"
   )) +
   labs(
-    title = paste0("Incidencia anual del duelo (", iso, ", marcador de posición)"),
+    title = paste0("Incidencia anual del duelo por homicidio (", iso, ")"),
     x = "Año", y = "Personas en duelo (miles)", fill = "Grupo de familia"
   ) +
   theme_bw()
@@ -162,9 +161,9 @@ incidencia_familia %>%
 #### S.4 Medida 2: multiplicadores {#sol-multiplicadores}
 
 ```{r sol-multiplicadores}
-# muertes totales del período (con las tasas placeholder = todas las causas)
+# muertes totales por homicidio del período (denominador del multiplicador)
 muertes_total <- read_csv("data/homicide_mortality_rates.csv", show_col_types = FALSE) %>%
-  filter(iso3 == iso, year %in% 1990:anio_final) %>%
+  filter(iso3 == iso, year %in% anio_inicial:anio_final) %>%
   left_join(pais %>% select(year, sex, age, pop), by = c("year", "sex", "age")) %>%
   summarise(m = sum(mx * pop, na.rm = TRUE)) %>%
   pull(m)

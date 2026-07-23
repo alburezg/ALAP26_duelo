@@ -33,13 +33,14 @@ rmarkdown::render("index.Rmd")
 
 ## Datos
 
-- `data/wpp_latam_1950_2023.zip` — insumos del World Population Prospects 2024
-  (mortalidad, fecundidad, población) para ~25 países de América Latina y el
-  Caribe, 1950–2023. Un archivo `.parquet` por país.
-- `data/countries.csv` — lista de países incluidos.
-- `data/homicide_mortality_rates.csv` — tasas de mortalidad por homicidio por país
-  (Módulo 4). **Marcador de posición** (por ahora, mortalidad por todas las
-  causas); se reemplazará por el archivo real conservando el mismo esquema.
+- `data/wpp_latam_1950_2023/` — insumos del World Population Prospects 2024
+  (mortalidad, fecundidad, población) para 20 países de América Latina y el
+  Caribe, 1950–2023. Un archivo `.parquet` por país (`wpp_<ISO3>.parquet`). Son
+  los mismos 20 países con datos de homicidio (véase abajo).
+- `data/countries.csv` — lista de los 20 países incluidos (`iso3`, `country`).
+- `data/homicide_mortality_rates.csv` — tasas de mortalidad por homicidio por país,
+  año, sexo y edad (Módulo 4). Calculadas a partir de estimaciones del *Global
+  Burden of Disease* 2023 para 20 países de la región (2000–2023).
 - `data/colombia/` — datos de entrada del artículo del conflicto colombiano
   (Acosta et al. 2026): tasas demográficas (`col_demo_1950_2018.parquet`),
   muertes por homicidio (`col_homicidios_1985_2018.parquet`), inmigrantes y

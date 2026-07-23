@@ -57,12 +57,8 @@ SOCSIM necesita las tasas en un formato de texto propio. Las funciones auxiliare
 en `functions_rates.R` convierten nuestros datos del WPP (los `.parquet` por país)
 a ese formato y las guardan en la carpeta `rates/`.
 
-```{r m5-unzip}
-# Asegurar que los datos del WPP estén descomprimidos (véase el Módulo 1)
-if (!dir.exists("data/wpp_latam")) {
-  dir.create("data/wpp_latam")
-  unzip("data/wpp_latam_1950_2023.zip", exdir = "data/wpp_latam")
-}
+```{r m5-source-rates}
+# Los datos del WPP están en data/wpp_latam_1950_2023/ (véase el Módulo 1)
 source("functions_rates.R")
 ```
 
@@ -209,7 +205,7 @@ Como verificación final, comparamos las tasas de salida de SOCSIM con las tasas
 entrada del WPP, agregadas a los mismos grupos quinquenales de edad y período.
 
 ```{r m5-compare}
-col_wpp <- read_parquet("data/wpp_latam/wpp_COL.parquet")
+col_wpp <- read_parquet("data/wpp_latam_1950_2023/wpp_COL.parquet")
 
 # Cortes de año y edad usados en las estimaciones SOCSIM
 yr_breaks <- unique(as.numeric(str_extract_all(asfr_sim$year, "\\d+", simplify = TRUE)))

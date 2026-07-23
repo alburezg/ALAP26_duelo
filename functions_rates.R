@@ -3,7 +3,7 @@
 # (fecundidad y mortalidad) a partir de los datos del WPP 2024.
 #
 # Adaptado del taller ALAP 2024 para leer los archivos .parquet del WPP que
-# preparamos para este taller (data/wpp_latam/wpp_<ISO3>.parquet), en lugar de
+# preparamos para este taller (data/wpp_latam_1950_2023/wpp_<ISO3>.parquet), en lugar de
 # los .RData originales.
 # ----------------------------------------------------------------------------
 
@@ -14,7 +14,7 @@ options(scipen = 999999)
 
 # Lee los datos del WPP para un país (ISO3) desde el .parquet preparado.
 .leer_wpp_pais <- function(iso) {
-  arrow::read_parquet(file.path("data/wpp_latam", paste0("wpp_", iso, ".parquet")))
+  arrow::read_parquet(file.path("data/wpp_latam_1950_2023", paste0("wpp_", iso, ".parquet")))
 }
 
 # ----------------------------------------------------------------------------

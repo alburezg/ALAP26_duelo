@@ -25,7 +25,7 @@ laboratorio. Se usan en los Módulos 1, 2, 4, 5, 6 y en las Soluciones.
 
 | Archivo | Descripción |
 |---|---|
-| [`data/wpp_latam_1950_2023.zip`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/wpp_latam_1950_2023.zip) | Un archivo `.parquet` por país (`wpp_<ISO3>.parquet`) más `countries.csv`. Cubre ~25 países de América Latina y el Caribe, 1950–2023. |
+| [`data/wpp_latam_1950_2023/`](https://github.com/alburezg/ALAP26_duelo/tree/main/data/wpp_latam_1950_2023) | Carpeta con un archivo `.parquet` por país (`wpp_<ISO3>.parquet`). Cubre 20 países de América Latina y el Caribe, 1950–2023 (los mismos 20 con datos de homicidio; véase D.2). |
 | [`data/countries.csv`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/countries.csv) | Lista de países incluidos (`iso3`, `country`). |
 
 **Columnas de cada `wpp_<ISO3>.parquet`** (una fila por `year` × `sex` × `age`):
@@ -54,19 +54,12 @@ referencia con la que se estima el duelo por violencia en el país elegido.
 | [`data/homicide_mortality_rates.csv`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/homicide_mortality_rates.csv) | Tasas de mortalidad por homicidio por país, año, sexo y edad. |
 
 **Columnas:** `iso3`, `year`, `sex`, `age`, `mx` (tasa de mortalidad por
-homicidio).
+homicidio). Cubre **20 países** de la región y los años **2000–2023**.
 
-> **Marcador de posición (*placeholder*).** El archivo definitivo de tasas
-> específicas por homicidio aún no está disponible. Por ahora, este archivo
-> contiene la mortalidad por **todas las causas** del WPP 2024 (columna `mx`),
-> con la **misma estructura y nombre** que tendrá el archivo real. Cuando lleguen
-> las tasas por homicidio, basta con reemplazar este archivo y el código no
-> cambia. (Con mortalidad por todas las causas, los resultados reflejan el duelo
-> *total*, no solo el violento.)
-
-**Fuente y referencia.** Marcador de posición derivado del WPP 2024 (véase D.1).
-El archivo definitivo se distribuirá más adelante y se documentará aquí junto con
-su fuente.
+**Fuente y referencia.** Tasas específicas por homicidio calculadas a partir de
+estimaciones del *Global Burden of Disease* 2023 (GBD 2023) para 20 países de
+América Latina y el Caribe. Institute for Health Metrics and Evaluation (IHME),
+*Global Burden of Disease Study 2023*, <https://www.healthdata.org/gbd>.
 
 #### D.3 Datos del conflicto colombiano (Módulo 3) {#dat-colombia}
 

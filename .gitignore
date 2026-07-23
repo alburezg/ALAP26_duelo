@@ -35,7 +35,8 @@ prep
 data/wpp2024_raw/
 *.csv.gz
 
-# --- Carpeta descomprimida del WPP (se genera al descomprimir el .zip) ---
+# --- Carpeta heredada del flujo antiguo con .zip (ya no se usa; los datos del
+#     WPP se versionan sin comprimir en data/wpp_latam_1950_2023/) ---
 data/wpp_latam/
 
 # --- Salidas intermedias del modelo de parentesco (Módulos 2, 3 y 4) ---
