@@ -61,6 +61,12 @@ presim.omar
 socsim_Colombia.sup.*
 data/socsim_*.rds
 
+# --- Diapositivas (beamer): versionar SOLO el PDF compilado; ignorar la fuente
+#     (.tex, refs.bib), las figuras (figures/, figures_src/) y todos los
+#     archivos intermedios de LaTeX ---
+diapositivas/*
+!diapositivas/modulo_1.pdf
+
 # --- Sistema ---
 .DS_Store
 Thumbs.db
