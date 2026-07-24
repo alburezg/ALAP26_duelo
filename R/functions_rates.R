@@ -7,9 +7,6 @@
 # los .RData originales.
 # ----------------------------------------------------------------------------
 
-# Crear la subcarpeta "rates" para guardar los archivos de tasas si no existe.
-ifelse(!dir.exists("rates"), dir.create("rates"), FALSE)
-
 options(scipen = 999999)
 
 # Lee los datos del WPP para un país (ISO3) desde el .parquet preparado.
@@ -20,7 +17,9 @@ options(scipen = 999999)
 # ----------------------------------------------------------------------------
 #### Tasas de fecundidad para SOCSIM ----
 
-write_socsim_fertility_rates_WPP <- function(country = "Colombia", iso = "COL") {
+write_socsim_fertility_rates_WPP <- function(country = "Colombia", iso = "COL", rates_dir = "rates") {
+  dir.create(rates_dir, recursive = TRUE, showWarnings = FALSE)
+
   # Fecundidad femenina por edad simple [15-49] (tasas por mujer, anuales)
   data <- .leer_wpp_pais(iso) %>%
     filter(sex == "f", age >= 15, age <= 49) %>%
@@ -66,7 +65,7 @@ write_socsim_fertility_rates_WPP <- function(country = "Colombia", iso = "COL") 
     n <- which(year == years)
     n_row <- (n - 1) * 37 + rows_ageF
 
-    outfilename <- file(paste0("rates/", country, "fert", year), "w")
+    outfilename <- file(file.path(rates_dir, paste0(country, "fert", year)), "w")
     cat(c("** Period (Monthly) Age-Specific Fertility Rates for", country, "in", year, "\n"),
       file = outfilename
     )
@@ -87,7 +86,9 @@ write_socsim_fertility_rates_WPP <- function(country = "Colombia", iso = "COL") 
 # ----------------------------------------------------------------------------
 #### Probabilidades de muerte para SOCSIM ----
 
-write_socsim_mortality_rates_WPP <- function(country = "Colombia", iso = "COL") {
+write_socsim_mortality_rates_WPP <- function(country = "Colombia", iso = "COL", rates_dir = "rates") {
+  dir.create(rates_dir, recursive = TRUE, showWarnings = FALSE)
+
   # Probabilidades de muerte (qx) por edad simple [0-100] y sexo
   data <- .leer_wpp_pais(iso) %>%
     transmute(year,
@@ -120,7 +121,7 @@ write_socsim_mortality_rates_WPP <- function(country = "Colombia", iso = "COL") 
     n <- which(year == years)
     n_row <- (n - 1) * 101 + rows_ageM
 
-    outfilename <- file(paste0("rates/", country, "mort", year), "w")
+    outfilename <- file(file.path(rates_dir, paste0(country, "mort", year)), "w")
     cat(c("** Period (Monthly) Age-Specific Probabilities of Death for", country, "in", year, "\n"),
       file = outfilename
     )

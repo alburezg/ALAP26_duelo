@@ -54,21 +54,27 @@ mismas tasas del WPP 2024 que preparamos para los modelos de DemoKin.
 #### 5.3 Escribir los archivos de tasas de entrada {#m5-tasas}
 
 SOCSIM necesita las tasas en un formato de texto propio. Las funciones auxiliares
-en `functions_rates.R` convierten nuestros datos del WPP (los `.parquet` por país)
-a ese formato y las guardan en la carpeta `rates/`.
+en `R/functions_rates.R` convierten nuestros datos del WPP (los `.parquet` por país)
+a ese formato y las guardan en la carpeta `socsim/rates/`.
 
 ```{r m5-source-rates}
 # Los datos del WPP están en data/wpp_latam_1950_2023/ (véase el Módulo 1)
-source("functions_rates.R")
+source("R/functions_rates.R")
+
+# Toda la simulación (tasas, población inicial y resultados de SOCSIM) se guarda
+# dentro de la carpeta socsim/, para no ensuciar la raíz del proyecto.
+folder <- file.path(getwd(), "socsim")
+dir.create(folder, showWarnings = FALSE)
+rates_dir <- file.path(folder, "rates")
 ```
 
 ```{r m5-write-rates}
-# Escribir los archivos de tasas para Colombia (ISO3 = "COL")
-write_socsim_fertility_rates_WPP(country = "Colombia", iso = "COL")
-write_socsim_mortality_rates_WPP(country = "Colombia", iso = "COL")
+# Escribir los archivos de tasas para Colombia (ISO3 = "COL") en socsim/rates/
+write_socsim_fertility_rates_WPP(country = "Colombia", iso = "COL", rates_dir = rates_dir)
+write_socsim_mortality_rates_WPP(country = "Colombia", iso = "COL", rates_dir = rates_dir)
 
 # Ejemplo: los archivos escritos para 1950
-list.files("rates", pattern = "1950")
+list.files(rates_dir, pattern = "1950")
 ```
 
 #### 5.4 Población inicial {#m5-poblacion}
@@ -93,8 +99,8 @@ presim.opop$fem <- sample(0:1, size_opop, replace = TRUE)
 presim.opop$group <- 1
 presim.opop$dob <- sample(500:1000, size_opop, replace = TRUE)
 
-write.table(presim.opop, "presim.opop", row.names = FALSE, col.names = FALSE)
-write.table(data.frame(), "presim.omar", row.names = FALSE, col.names = FALSE) # matrimonios vacío
+write.table(presim.opop, file.path(folder, "presim.opop"), row.names = FALSE, col.names = FALSE)
+write.table(data.frame(), file.path(folder, "presim.omar"), row.names = FALSE, col.names = FALSE) # matrimonios vacío
 ```
 
 #### 5.5 Correr la simulación {#m5-correr}
@@ -107,7 +113,7 @@ una estructura por edad estable), y luego un segmento por año hasta 2023.
 > y guardamos los resultados; si ya existen, solo los cargamos.
 
 ```{r m5-run-shown, eval=FALSE}
-folder <- getwd()
+folder <- file.path(getwd(), "socsim")
 supfile <- "socsim_Colombia.sup"
 seed <- "101224"
 
@@ -121,7 +127,7 @@ saveRDS(list(opop = opop, omar = omar), "data/socsim_resultados.rds")
 ```
 
 ```{r m5-run, echo=FALSE, results='hide'}
-folder <- getwd()
+folder <- file.path(getwd(), "socsim")
 supfile <- "socsim_Colombia.sup"
 seed <- "101224"
 archivo_sim <- "data/socsim_resultados.rds"

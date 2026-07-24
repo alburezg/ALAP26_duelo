@@ -497,7 +497,7 @@ estimaciones de duelo</h1>
 <h3 class="subtitle">Escuela ALAP 2026 · San José, Costa Rica</h3>
 <h4 class="author">Diego Alburez-Gutierrez, Enrique Acosta &amp; Liliana
 Calderón</h4>
-<h4 class="date">Actualizado: 2026-07-23</h4>
+<h4 class="date">Actualizado: 2026-07-24</h4>
 
 </div>
 
@@ -2407,17 +2407,23 @@ que preparamos para los modelos de DemoKin.</p>
 <div id="m5-tasas" class="section level4">
 <h4>5.3 Escribir los archivos de tasas de entrada</h4>
 <p>SOCSIM necesita las tasas en un formato de texto propio. Las
-funciones auxiliares en <code>functions_rates.R</code> convierten
+funciones auxiliares en <code>R/functions_rates.R</code> convierten
 nuestros datos del WPP (los <code>.parquet</code> por país) a ese
-formato y las guardan en la carpeta <code>rates/</code>.</p>
+formato y las guardan en la carpeta <code>socsim/rates/</code>.</p>
 <div class="sourceCode" id="cb63"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" tabindex="-1"></a><span class="co"># Los datos del WPP están en data/wpp_latam_1950_2023/ (véase el Módulo 1)</span></span>
-<span id="cb63-2"><a href="#cb63-2" tabindex="-1"></a><span class="fu">source</span>(<span class="st">&quot;functions_rates.R&quot;</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb64"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1" tabindex="-1"></a><span class="co"># Escribir los archivos de tasas para Colombia (ISO3 = &quot;COL&quot;)</span></span>
-<span id="cb64-2"><a href="#cb64-2" tabindex="-1"></a><span class="fu">write_socsim_fertility_rates_WPP</span>(<span class="at">country =</span> <span class="st">&quot;Colombia&quot;</span>, <span class="at">iso =</span> <span class="st">&quot;COL&quot;</span>)</span>
-<span id="cb64-3"><a href="#cb64-3" tabindex="-1"></a><span class="fu">write_socsim_mortality_rates_WPP</span>(<span class="at">country =</span> <span class="st">&quot;Colombia&quot;</span>, <span class="at">iso =</span> <span class="st">&quot;COL&quot;</span>)</span>
+<span id="cb63-2"><a href="#cb63-2" tabindex="-1"></a><span class="fu">source</span>(<span class="st">&quot;R/functions_rates.R&quot;</span>)</span>
+<span id="cb63-3"><a href="#cb63-3" tabindex="-1"></a></span>
+<span id="cb63-4"><a href="#cb63-4" tabindex="-1"></a><span class="co"># Toda la simulación (tasas, población inicial y resultados de SOCSIM) se guarda</span></span>
+<span id="cb63-5"><a href="#cb63-5" tabindex="-1"></a><span class="co"># dentro de la carpeta socsim/, para no ensuciar la raíz del proyecto.</span></span>
+<span id="cb63-6"><a href="#cb63-6" tabindex="-1"></a>folder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">&quot;socsim&quot;</span>)</span>
+<span id="cb63-7"><a href="#cb63-7" tabindex="-1"></a><span class="fu">dir.create</span>(folder, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb63-8"><a href="#cb63-8" tabindex="-1"></a>rates_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(folder, <span class="st">&quot;rates&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb64"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1" tabindex="-1"></a><span class="co"># Escribir los archivos de tasas para Colombia (ISO3 = &quot;COL&quot;) en socsim/rates/</span></span>
+<span id="cb64-2"><a href="#cb64-2" tabindex="-1"></a><span class="fu">write_socsim_fertility_rates_WPP</span>(<span class="at">country =</span> <span class="st">&quot;Colombia&quot;</span>, <span class="at">iso =</span> <span class="st">&quot;COL&quot;</span>, <span class="at">rates_dir =</span> rates_dir)</span>
+<span id="cb64-3"><a href="#cb64-3" tabindex="-1"></a><span class="fu">write_socsim_mortality_rates_WPP</span>(<span class="at">country =</span> <span class="st">&quot;Colombia&quot;</span>, <span class="at">iso =</span> <span class="st">&quot;COL&quot;</span>, <span class="at">rates_dir =</span> rates_dir)</span>
 <span id="cb64-4"><a href="#cb64-4" tabindex="-1"></a></span>
 <span id="cb64-5"><a href="#cb64-5" tabindex="-1"></a><span class="co"># Ejemplo: los archivos escritos para 1950</span></span>
-<span id="cb64-6"><a href="#cb64-6" tabindex="-1"></a><span class="fu">list.files</span>(<span class="st">&quot;rates&quot;</span>, <span class="at">pattern =</span> <span class="st">&quot;1950&quot;</span>)</span></code></pre></div>
+<span id="cb64-6"><a href="#cb64-6" tabindex="-1"></a><span class="fu">list.files</span>(rates_dir, <span class="at">pattern =</span> <span class="st">&quot;1950&quot;</span>)</span></code></pre></div>
 <pre><code>## [1] &quot;Colombiafert1950&quot; &quot;Colombiamort1950&quot;</code></pre>
 </div>
 <div id="m5-poblacion" class="section level4">
@@ -2440,8 +2446,8 @@ se asignan al azar; el resto de columnas las completa SOCSIM.</p>
 <span id="cb66-13"><a href="#cb66-13" tabindex="-1"></a>presim.opop<span class="sc">$</span>group <span class="ot">&lt;-</span> <span class="dv">1</span></span>
 <span id="cb66-14"><a href="#cb66-14" tabindex="-1"></a>presim.opop<span class="sc">$</span>dob <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">500</span><span class="sc">:</span><span class="dv">1000</span>, size_opop, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb66-15"><a href="#cb66-15" tabindex="-1"></a></span>
-<span id="cb66-16"><a href="#cb66-16" tabindex="-1"></a><span class="fu">write.table</span>(presim.opop, <span class="st">&quot;presim.opop&quot;</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>, <span class="at">col.names =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb66-17"><a href="#cb66-17" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">data.frame</span>(), <span class="st">&quot;presim.omar&quot;</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>, <span class="at">col.names =</span> <span class="cn">FALSE</span>) <span class="co"># matrimonios vacío</span></span></code></pre></div>
+<span id="cb66-16"><a href="#cb66-16" tabindex="-1"></a><span class="fu">write.table</span>(presim.opop, <span class="fu">file.path</span>(folder, <span class="st">&quot;presim.opop&quot;</span>), <span class="at">row.names =</span> <span class="cn">FALSE</span>, <span class="at">col.names =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb66-17"><a href="#cb66-17" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">data.frame</span>(), <span class="fu">file.path</span>(folder, <span class="st">&quot;presim.omar&quot;</span>), <span class="at">row.names =</span> <span class="cn">FALSE</span>, <span class="at">col.names =</span> <span class="cn">FALSE</span>) <span class="co"># matrimonios vacío</span></span></code></pre></div>
 </div>
 <div id="m5-correr" class="section level4">
 <h4>5.5 Correr la simulación</h4>
@@ -2454,7 +2460,7 @@ luego un segmento por año hasta 2023.</p>
 minutos. La corremos una vez y guardamos los resultados; si ya existen,
 solo los cargamos.</p>
 </blockquote>
-<div class="sourceCode" id="cb67"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" tabindex="-1"></a>folder <span class="ot">&lt;-</span> <span class="fu">getwd</span>()</span>
+<div class="sourceCode" id="cb67"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" tabindex="-1"></a>folder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">&quot;socsim&quot;</span>)</span>
 <span id="cb67-2"><a href="#cb67-2" tabindex="-1"></a>supfile <span class="ot">&lt;-</span> <span class="st">&quot;socsim_Colombia.sup&quot;</span></span>
 <span id="cb67-3"><a href="#cb67-3" tabindex="-1"></a>seed <span class="ot">&lt;-</span> <span class="st">&quot;101224&quot;</span></span>
 <span id="cb67-4"><a href="#cb67-4" tabindex="-1"></a></span>
@@ -3379,16 +3385,16 @@ y las funciones auxiliares que ya vienen en el repositorio.</p>
 </thead>
 <tbody>
 <tr class="odd">
-<td><a href="https://github.com/alburezg/ALAP26_duelo/raw/main/socsim_Colombia.sup"><code>socsim_Colombia.sup</code></a></td>
+<td><a href="https://github.com/alburezg/ALAP26_duelo/raw/main/socsim/socsim_Colombia.sup"><code>socsim/socsim_Colombia.sup</code></a></td>
 <td>Archivo de supervisión de SOCSIM: define los segmentos a simular
 (100 años de calentamiento con tasas de 1950 y luego un segmento por año
 hasta 2023).</td>
 </tr>
 <tr class="even">
-<td><a href="https://github.com/alburezg/ALAP26_duelo/raw/main/functions_rates.R"><code>functions_rates.R</code></a></td>
+<td><a href="https://github.com/alburezg/ALAP26_duelo/raw/main/R/functions_rates.R"><code>R/functions_rates.R</code></a></td>
 <td>Funciones que convierten los <code>.parquet</code> del WPP al
 formato de tasas mensuales de SOCSIM y las escriben en
-<code>rates/</code>.</td>
+<code>socsim/rates/</code>.</td>
 </tr>
 </tbody>
 </table>
@@ -3440,8 +3446,8 @@ simulados.</td>
 simulación.</td>
 </tr>
 <tr class="odd">
-<td><code>rates/</code>, <code>presim.opop</code>,
-<code>presim.omar</code>, <code>sim_results_*/</code></td>
+<td><code>socsim/rates/</code>, <code>socsim/presim.opop</code>,
+<code>socsim/presim.omar</code>, <code>socsim/sim_results_*/</code></td>
 <td>Módulos 5–6</td>
 <td>Archivos intermedios de SOCSIM.</td>
 </tr>

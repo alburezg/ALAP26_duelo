@@ -121,7 +121,7 @@ Edad-Periodo-Cohorte (APC): una persona y sus parientes atraviesan tasas
 distintas a lo largo de su vida, siguiendo una **diagonal** en el diagrama de
 Lexis (edad × año). Período y cohorte son dos formas de recortar ese plano:
 
-![Dimensiones Edad-Periodo-Cohorte del modelo de parentesco. Fuente: Caswell (2019).](apc.png)
+![Dimensiones Edad-Periodo-Cohorte del modelo de parentesco. Fuente: Caswell (2019).](img/apc.png)
 
 #### 2.2 El diagrama de parentesco: cómo se eligen los parientes {#m2-diagrama}
 
@@ -134,7 +134,7 @@ subsidio de la sección anterior). El diagrama siguiente muestra el número espe
 de parientes **mujeres** de una Focal colombiana de 30 años, con el código de
 DemoKin y el conteo en cada nodo:
 
-![Diagrama de parentesco de Keyfitz para una mujer colombiana promedio de 30 años. Cada nodo es un tipo de pariente (con su código de DemoKin y el número esperado de parientes vivos); las aristas conectan a cada pariente con el que lo genera. Adaptado del taller de la Escuela ALAP 2024.](diagrama_keyfitz.png)
+![Diagrama de parentesco de Keyfitz para una mujer colombiana promedio de 30 años. Cada nodo es un tipo de pariente (con su código de DemoKin y el número esperado de parientes vivos); las aristas conectan a cada pariente con el que lo genera. Adaptado del taller de la Escuela ALAP 2024.](img/diagrama_keyfitz.png)
 
 La equivalencia entre los códigos de DemoKin y los de @caswell_formal_2019, junto
 con las etiquetas legibles, está en la tabla `demokin_codes` del paquete. Nótese

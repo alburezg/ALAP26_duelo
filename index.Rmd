@@ -11,8 +11,8 @@ output:
     pandoc_args: ["--mathml"]
     theme: readable
     highlight: pygments
-    css: styles.css
-bibliography: kinship.bib
+    css: assets/styles.css
+bibliography: assets/kinship.bib
 link-citations: true
 ---
 

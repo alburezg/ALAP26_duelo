@@ -1,9 +1,9 @@
 # =============================================================================
 # .gitignore
 # Se versionan SOLO los archivos de ENTRADA y el CÓDIGO necesario para
-# reproducir el taller (index.Rmd, modulo_*.Rmd, functions_rates.R,
-# socsim_Colombia.sup, kinship.bib, styles.css, README.md y los datos de
-# entrada en data/). Todo lo que se GENERA al ejecutar el código queda excluido.
+# reproducir el taller (index.Rmd, modulo_*.Rmd, R/, img/, assets/,
+# socsim/socsim_Colombia.sup, README.md y los datos de entrada en data/).
+# Todo lo que se GENERA al ejecutar el código queda excluido.
 # Los scripts de preparación de datos (prep/) son de uso interno de los docentes
 # (dependen de rutas locales) y NO se versionan.
 # =============================================================================
@@ -45,11 +45,14 @@ data/colombia/col_kin_1985_2018.parquet
 data/kin_*.rds
 data/kin_*.parquet
 
-# --- Artefactos de la microsimulación SOCSIM (Módulos 5-6) ---
-rates/
-sim_results_*/            # carpeta de salida que crea SOCSIM
-presim.opop
-presim.omar
+# --- SOCSIM (Módulos 5-6): la simulación corre dentro de socsim/. Se versiona
+#     SOLO el archivo de configuración; todo lo generado (presim.*, rates/,
+#     sim_results_*) queda excluido. ---
+socsim/*
+!socsim/socsim_Colombia.sup
+data/socsim_*.rds
+
+# Red de seguridad: artefactos de SOCSIM que pudieran quedar en otra carpeta
 *.opop
 *.omar
 *.opox
@@ -58,8 +61,6 @@ presim.omar
 *.pop
 *.omor
 *.log
-socsim_Colombia.sup.*
-data/socsim_*.rds
 
 # --- Diapositivas (beamer): versionar SOLO el PDF compilado; ignorar la fuente
 #     (.tex, refs.bib), las figuras (figures/, figures_src/) y todos los

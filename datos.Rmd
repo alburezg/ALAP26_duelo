@@ -90,8 +90,8 @@ repositorio.
 
 | Archivo | Descripción |
 |---|---|
-| [`socsim_Colombia.sup`](https://github.com/alburezg/ALAP26_duelo/raw/main/socsim_Colombia.sup) | Archivo de supervisión de SOCSIM: define los segmentos a simular (100 años de calentamiento con tasas de 1950 y luego un segmento por año hasta 2023). |
-| [`functions_rates.R`](https://github.com/alburezg/ALAP26_duelo/raw/main/functions_rates.R) | Funciones que convierten los `.parquet` del WPP al formato de tasas mensuales de SOCSIM y las escriben en `rates/`. |
+| [`socsim/socsim_Colombia.sup`](https://github.com/alburezg/ALAP26_duelo/raw/main/socsim/socsim_Colombia.sup) | Archivo de supervisión de SOCSIM: define los segmentos a simular (100 años de calentamiento con tasas de 1950 y luego un segmento por año hasta 2023). |
+| [`R/functions_rates.R`](https://github.com/alburezg/ALAP26_duelo/raw/main/R/functions_rates.R) | Funciones que convierten los `.parquet` del WPP al formato de tasas mensuales de SOCSIM y las escriben en `socsim/rates/`. |
 
 **Fuente y referencia.** SOCSIM: @hammel_socsim_1976; @mason2016socsim. Interfaz en
 R `rsocsim`: <https://mpidr.github.io/rsocsim/>. Las tasas de entrada provienen
@@ -109,7 +109,7 @@ crea la primera vez que se ejecuta y luego reutiliza (caché). Aparecen en el
 | `data/kin_<ISO3>.parquet` | Soluciones (Módulo 4) | Estructura de parentesco del país elegido. |
 | `data/socsim_resultados.rds` | Módulo 5 | Población (`.opop`) y matrimonios (`.omar`) simulados. |
 | `data/socsim_kinloss.rds` | Módulo 6 | Pérdida y disponibilidad de parientes estimadas de la simulación. |
-| `rates/`, `presim.opop`, `presim.omar`, `sim_results_*/` | Módulos 5–6 | Archivos intermedios de SOCSIM. |
+| `socsim/rates/`, `socsim/presim.opop`, `socsim/presim.omar`, `socsim/sim_results_*/` | Módulos 5–6 | Archivos intermedios de SOCSIM. |
 
 > Como estos archivos se regeneran a partir de los insumos documentados arriba, no
 > es necesario descargarlos: se crean solos al correr los laboratorios en orden.

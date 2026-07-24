@@ -10,26 +10,40 @@ Materiales del taller de la Escuela de la Asociación Latinoamericana de Poblaci
 (Instituto Max Planck de Investigación Demográfica; Centro de Estudios
 Demográficos, Barcelona).
 
-El sitio web del curso se genera a partir de `index.Rmd`, que reúne un módulo por
-pestaña (`modulo_1.Rmd` … `modulo_6.Rmd`) mediante documentos hijos (*child
-documents*). Para compilarlo:
+## Empieza aquí
+
+- **Solo ver el material:** abre `index.html` en tu navegador. Contiene todo el
+  taller (una pestaña por módulo) y no necesitas instalar nada.
+- **Reconstruir el sitio:** desde la raíz del repositorio, ejecuta en R:
 
 ```r
 rmarkdown::render("index.Rmd")
 ```
 
+`index.Rmd` es el documento maestro: reúne los módulos (`modulo_1.Rmd` …
+`modulo_6.Rmd`) como documentos hijos (*child documents*). Los `.Rmd` viven en la
+raíz para que puedas abrir cualquier módulo y ejecutar sus bloques directamente,
+sin cambiar el directorio de trabajo.
+
 ## Estructura
 
-| Archivo | Contenido |
+| Ruta | Contenido |
 |---|---|
-| `index.Rmd` | Documento maestro (pestañas por módulo) |
+| `index.Rmd` | Documento maestro (arma el sitio con una pestaña por módulo) |
+| `index.html` | Sitio compilado (ábrelo para ver el taller sin instalar nada) |
 | `modulo_1.Rmd` | Introducción a la demografía del parentesco + laboratorio de preparación técnica |
 | `modulo_2.Rmd` | Laboratorio: estimación de parentesco con DemoKin (modelo de dos sexos variable en el tiempo, enfoque por período) |
 | `modulo_3.Rmd` | Demografía del duelo + laboratorio: conflicto colombiano (cuatro medidas clave) |
 | `modulo_4.Rmd` | Laboratorio de ejercicios: replicar el análisis para otro país |
 | `modulo_5.Rmd`, `modulo_6.Rmd` | Microsimulación con SOCSIM (`rsocsim`): correr una simulación y estimar la pérdida de parientes |
 | `soluciones.Rmd` | Solución completa del ejercicio del Módulo 4, resuelta para Costa Rica |
+| `datos.Rmd` | Documentación de los datos de entrada del taller |
 | `data/` | Datos de entrada del taller (véase la pestaña **Datos** del sitio) |
+| `R/functions_rates.R` | Funciones que generan las tasas de entrada para SOCSIM |
+| `img/` | Imágenes usadas en los módulos |
+| `assets/` | Hoja de estilos (`styles.css`) y bibliografía (`kinship.bib`) |
+| `socsim/` | Configuración de SOCSIM (`socsim_Colombia.sup`); la simulación escribe aquí sus salidas |
+| `diapositivas/` | Diapositivas del Módulo 1 (`modulo_1.pdf`) |
 
 ## Datos
 
