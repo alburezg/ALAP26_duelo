@@ -7,7 +7,7 @@
 # los .RData originales.
 # ----------------------------------------------------------------------------
 
-options(scipen = 999999)
+options(scipen = 9999)
 
 # Lee los datos del WPP para un país (ISO3) desde el .parquet preparado.
 .leer_wpp_pais <- function(iso) {
@@ -99,10 +99,11 @@ write_socsim_mortality_rates_WPP <- function(country = "Colombia", iso = "COL", 
     )
 
   # Convertir probabilidades anuales en mensuales (Wachter 2014, p. 53)
+  # q100 = 1 para  limitar la esperanza de vida a 100
   ASMP <-
     data %>%
     mutate(
-      qx_mo = if_else(age == 100, qx / 12, 1 - (1 - qx)^(1 / 12)),
+      qx_mo = if_else(age == 100, 1, 1 - (1 - qx)^(1 / 12)),
       Age_up = age + 1,
       Month = 0
     ) %>%
