@@ -14,7 +14,13 @@ library(data.table)
 Cargamos los resultados de la simulación del Módulo 5:
 
 ```{r m6-load}
-sim <- readRDS("data/socsim_resultados.rds")
+archivo_sim <- "data/socsim_resultados.rds"
+
+if (!file.exists(archivo_sim)) {
+  stop("Ejecuta primero el Módulo 5: es el que genera ", archivo_sim, ".")
+}
+
+sim <- readRDS(archivo_sim)
 opop <- sim$opop
 omar <- sim$omar
 ```

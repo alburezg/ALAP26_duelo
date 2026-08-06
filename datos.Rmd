@@ -84,14 +84,13 @@ replicación para el detalle de fuentes y métodos.
 #### D.4 Insumos de la microsimulación SOCSIM (Módulos 5–6) {#dat-socsim}
 
 La microsimulación reutiliza las **mismas tasas del WPP** (D.1), convertidas al
-formato de texto que exige SOCSIM. Los únicos archivos propios de esta parte son
-el archivo de supervisión y las funciones auxiliares que ya vienen en el
-repositorio.
+formato de texto que exige SOCSIM. El único archivo propio de esta parte es el
+archivo de supervisión que ya viene en el repositorio; las funciones que escriben
+las tasas se definen dentro del propio Módulo 5.
 
 | Archivo | Descripción |
 |---|---|
 | [`socsim/socsim_Colombia.sup`](https://github.com/alburezg/ALAP26_duelo/raw/main/socsim/socsim_Colombia.sup) | Archivo de supervisión de SOCSIM: define los segmentos a simular (100 años de calentamiento con tasas de 1950 y luego un segmento por año hasta 2023). |
-| [`R/functions_rates.R`](https://github.com/alburezg/ALAP26_duelo/raw/main/R/functions_rates.R) | Funciones que convierten los `.parquet` del WPP al formato de tasas mensuales de SOCSIM y las escriben en `socsim/rates/`. |
 
 **Fuente y referencia.** SOCSIM: @hammel_socsim_1976; @mason2016socsim. Interfaz en
 R `rsocsim`: <https://mpidr.github.io/rsocsim/>. Las tasas de entrada provienen

@@ -39,7 +39,6 @@ sin cambiar el directorio de trabajo.
 | `soluciones.Rmd` | Solución completa del ejercicio del Módulo 4, resuelta para Costa Rica |
 | `datos.Rmd` | Documentación de los datos de entrada del taller |
 | `data/` | Datos de entrada del taller (véase la pestaña **Datos** del sitio) |
-| `R/functions_rates.R` | Funciones que generan las tasas de entrada para SOCSIM |
 | `img/` | Imágenes usadas en los módulos |
 | `assets/` | Hoja de estilos (`styles.css`) y bibliografía (`kinship.bib`) |
 | `socsim/` | Configuración de SOCSIM (`socsim_Colombia.sup`); la simulación escribe aquí sus salidas |
@@ -73,8 +72,8 @@ versionadas por su tamaño, son de uso interno de los docentes y no se distribuy
 
 ## Requisitos
 
-R (≥ 4.2), RStudio y los paquetes `tidyverse`, `arrow`,
-[`DemoKin`](https://github.com/IvanWilli/DemoKin) y
+R (≥ 4.2), RStudio y los paquetes `tidyverse`, `arrow`, `scales`, `ggh4x`,
+`data.table`, [`DemoKin`](https://github.com/IvanWilli/DemoKin) y
 [`rsocsim`](https://cran.r-project.org/package=rsocsim). La instalación se cubre
 en el Módulo 1.
 

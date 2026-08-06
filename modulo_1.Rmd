@@ -87,7 +87,12 @@ install.packages(c("tidyverse", "arrow", "scales", "ggh4x", "data.table"))
 ```{r check_sim}
 library(rsocsim)
 
-folder = rsocsim::create_simulation_folder()
+# basedir mantiene la prueba dentro del proyecto (socsim/); si se omite,
+# rsocsim escribe en el directorio temporal de la sesión de R.
+folder = rsocsim::create_simulation_folder(
+  basedir = file.path(getwd(), "socsim"),
+  simdir = "check_instalacion"
+)
 supfile = rsocsim::create_sup_file(folder)
 seed = 300
 rsocsim::socsim(folder, supfile, seed)

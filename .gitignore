@@ -1,7 +1,7 @@
 # =============================================================================
 # .gitignore
 # Se versionan SOLO los archivos de ENTRADA y el CÓDIGO necesario para
-# reproducir el taller (index.Rmd, modulo_*.Rmd, R/, img/, assets/,
+# reproducir el taller (index.Rmd, modulo_*.Rmd, img/, assets/,
 # socsim/socsim_Colombia.sup, README.md y los datos de entrada en data/).
 # Todo lo que se GENERA al ejecutar el código queda excluido.
 # Los scripts de preparación de datos (prep/) son de uso interno de los docentes
@@ -25,6 +25,9 @@ CLAUDE.md
 # --- Sitio renderizado y artefactos de knitr/rmarkdown (salida) ---
 *_files/
 *_cache/
+# Al ejecutar un módulo por separado (no vía index.Rmd), knitr usa cache/ y figure/
+cache/
+figure/
 
 # --- Materiales de referencia (PDFs/Word grandes; no forman parte del sitio) ---
 _ref/
