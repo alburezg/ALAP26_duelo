@@ -84,12 +84,12 @@ install.packages(c("tidyverse", "arrow", "scales", "ggh4x", "data.table"))
 ```
 `rsocsim` tiene una simulación sencilla incorporada que puedes ejecutar para ver si el paquete se ha instalado correctamente. Por ahora, vamos a ejecutar el código sin centrarnos en los detalles técnicos:
 
-```{r check_sim}
+```{r m1-check_sim}
 library(rsocsim)
 
-folder = rsocsim::create_simulation_folder()
-supfile = rsocsim::create_sup_file(folder)
-seed = 300
+folder <- rsocsim::create_simulation_folder()
+supfile <- rsocsim::create_sup_file(folder)
+seed <- 300
 rsocsim::socsim(folder, supfile, seed)
 ```
 Con esto quedan instalados **todos** los paquetes que usaremos a lo largo del
