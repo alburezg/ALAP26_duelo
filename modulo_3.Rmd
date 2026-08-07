@@ -132,7 +132,7 @@ El siguiente diagrama sitúa a cada tipo de pariente respecto de Focal y lo colo
 según pertenezca a la familia **cercana** (rosa) o **extendida** (azul). Estos son
 los mismos colores que usaremos en todas las figuras del módulo:
 
-![Parientes considerados en el análisis, coloreados según sean familia cercana (rosa) o extendida (azul). Adaptado de @acosta_weaponizing_2026.](diagrama_familia.png)
+![Parientes considerados en el análisis, coloreados según sean familia cercana (rosa) o extendida (azul). Adaptado de @acosta_weaponizing_2026.](img/diagrama_familia.png)
 
 ```{r m3-labels}
 etiquetas_kin <- c(
@@ -284,7 +284,7 @@ $p_0^{\mathcal{D}}$). Su **intersección** es la categoría "cercana y extendida
 su **unión** (toda el área sombreada) es "cercana o extendida", con probabilidad
 $1 - p_0^{\mathcal{C}}\,p_0^{\mathcal{D}}$.
 
-![Operaciones booleanas sobre los dos estados de duelo. Cada región lleva su probabilidad bajo el supuesto de independencia. La intersección ("y") es la categoría "cercana y extendida"; toda el área sombreada es la unión ("o"). Adaptado del material metodológico de @acosta_weaponizing_2026.](venn_duelo.png)
+![Operaciones booleanas sobre los dos estados de duelo. Cada región lleva su probabilidad bajo el supuesto de independencia. La intersección ("y") es la categoría "cercana y extendida"; toda el área sombreada es la unión ("o"). Adaptado del material metodológico de @acosta_weaponizing_2026.](img/venn_duelo.png)
 
 Las cuatro suman 1: cada persona cae en exactamente una. La probabilidad de haber
 perdido **al menos un pariente cualquiera** (*cercana O extendida*) es el

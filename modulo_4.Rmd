@@ -106,7 +106,6 @@ hombre (por eficiencia; normalmente correríamos `kin2sex()` de nuevo con
 kin_f <- kin2sex(
   pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
   time_invariant = FALSE,
-  output_period = 1990:2020,
   output_kin = c("d", "m", "s", "gm", "gd", "a", "n", "c"),
   sex_focal = "f",
   birth_female = 0.5

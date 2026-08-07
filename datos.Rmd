@@ -25,7 +25,7 @@ laboratorio. Se usan en los Módulos 1, 2, 4, 5, 6 y en las Soluciones.
 
 | Archivo | Descripción |
 |---|---|
-| [`data/wpp_latam_1950_2023.zip`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/wpp_latam_1950_2023.zip) | Un archivo `.parquet` por país (`wpp_<ISO3>.parquet`) más `countries.csv`. Cubre ~25 países de América Latina y el Caribe, 1950–2023. |
+| [`data/wpp_latam_1950_2023/`](https://github.com/alburezg/ALAP26_duelo/tree/main/data/wpp_latam_1950_2023) | Carpeta con un archivo `.parquet` por país (`wpp_<ISO3>.parquet`). Cubre 20 países de América Latina y el Caribe, 1950–2023 (los mismos 20 con datos de homicidio; véase D.2). |
 | [`data/countries.csv`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/countries.csv) | Lista de países incluidos (`iso3`, `country`). |
 
 **Columnas de cada `wpp_<ISO3>.parquet`** (una fila por `year` × `sex` × `age`):
@@ -54,19 +54,12 @@ referencia con la que se estima el duelo por violencia en el país elegido.
 | [`data/homicide_mortality_rates.csv`](https://github.com/alburezg/ALAP26_duelo/raw/main/data/homicide_mortality_rates.csv) | Tasas de mortalidad por homicidio por país, año, sexo y edad. |
 
 **Columnas:** `iso3`, `year`, `sex`, `age`, `mx` (tasa de mortalidad por
-homicidio).
+homicidio). Cubre **20 países** de la región y los años **2000–2023**.
 
-> **Marcador de posición (*placeholder*).** El archivo definitivo de tasas
-> específicas por homicidio aún no está disponible. Por ahora, este archivo
-> contiene la mortalidad por **todas las causas** del WPP 2024 (columna `mx`),
-> con la **misma estructura y nombre** que tendrá el archivo real. Cuando lleguen
-> las tasas por homicidio, basta con reemplazar este archivo y el código no
-> cambia. (Con mortalidad por todas las causas, los resultados reflejan el duelo
-> *total*, no solo el violento.)
-
-**Fuente y referencia.** Marcador de posición derivado del WPP 2024 (véase D.1).
-El archivo definitivo se distribuirá más adelante y se documentará aquí junto con
-su fuente.
+**Fuente y referencia.** Tasas específicas por homicidio calculadas a partir de
+estimaciones del *Global Burden of Disease* 2023 (GBD 2023) para 20 países de
+América Latina y el Caribe. Institute for Health Metrics and Evaluation (IHME),
+*Global Burden of Disease Study 2023*, <https://www.healthdata.org/gbd>.
 
 #### D.3 Datos del conflicto colombiano (Módulo 3) {#dat-colombia}
 
@@ -91,14 +84,13 @@ replicación para el detalle de fuentes y métodos.
 #### D.4 Insumos de la microsimulación SOCSIM (Módulos 5–6) {#dat-socsim}
 
 La microsimulación reutiliza las **mismas tasas del WPP** (D.1), convertidas al
-formato de texto que exige SOCSIM. Los únicos archivos propios de esta parte son
-el archivo de supervisión y las funciones auxiliares que ya vienen en el
-repositorio.
+formato de texto que exige SOCSIM. El único archivo propio de esta parte es el
+archivo de supervisión que ya viene en el repositorio; las funciones que escriben
+las tasas se definen dentro del propio Módulo 5.
 
 | Archivo | Descripción |
 |---|---|
-| [`socsim_Colombia.sup`](https://github.com/alburezg/ALAP26_duelo/raw/main/socsim_Colombia.sup) | Archivo de supervisión de SOCSIM: define los segmentos a simular (100 años de calentamiento con tasas de 1950 y luego un segmento por año hasta 2023). |
-| [`functions_rates.R`](https://github.com/alburezg/ALAP26_duelo/raw/main/functions_rates.R) | Funciones que convierten los `.parquet` del WPP al formato de tasas mensuales de SOCSIM y las escriben en `rates/`. |
+| [`socsim/socsim_Colombia.sup`](https://github.com/alburezg/ALAP26_duelo/raw/main/socsim/socsim_Colombia.sup) | Archivo de supervisión de SOCSIM: define los segmentos a simular (100 años de calentamiento con tasas de 1950 y luego un segmento por año hasta 2023). |
 
 **Fuente y referencia.** SOCSIM: @hammel_socsim_1976; @mason2016socsim. Interfaz en
 R `rsocsim`: <https://mpidr.github.io/rsocsim/>. Las tasas de entrada provienen
@@ -116,7 +108,7 @@ crea la primera vez que se ejecuta y luego reutiliza (caché). Aparecen en el
 | `data/kin_<ISO3>.parquet` | Soluciones (Módulo 4) | Estructura de parentesco del país elegido. |
 | `data/socsim_resultados.rds` | Módulo 5 | Población (`.opop`) y matrimonios (`.omar`) simulados. |
 | `data/socsim_kinloss.rds` | Módulo 6 | Pérdida y disponibilidad de parientes estimadas de la simulación. |
-| `rates/`, `presim.opop`, `presim.omar`, `sim_results_*/` | Módulos 5–6 | Archivos intermedios de SOCSIM. |
+| `socsim/rates/`, `socsim/presim.opop`, `socsim/presim.omar`, `socsim/sim_results_*/` | Módulos 5–6 | Archivos intermedios de SOCSIM. |
 
 > Como estos archivos se regeneran a partir de los insumos documentados arriba, no
 > es necesario descargarlos: se crean solos al correr los laboratorios en orden.

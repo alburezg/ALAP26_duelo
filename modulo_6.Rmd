@@ -3,13 +3,7 @@
 *A cargo de Liliana Calderón.* (Adaptado del taller de la Escuela ALAP 2024;
 sección de pérdida de parientes preparada originalmente por Mallika Snyder.)
 
-Una vez corrida la simulación (Módulo 5), SOCSIM nos da una **genealogía
-sintética** de toda la población: sabemos cuándo nace, se casa y muere cada
-individuo, y quiénes son sus padres y su cónyuge. Con esa información podemos
-identificar redes de parentesco extensas —incluso parientes lejanos difíciles de
-captar en una encuesta— y estudiar la **pérdida de parientes** a lo largo del
-tiempo. Este es un enfoque complementario al de los modelos analíticos de los
-Módulos 2 y 3.
+Una vez corrida la simulación (Módulo 5), SOCSIM nos proporciona una **genealogía sintética** de toda la población: sabemos cuándo nace, se casa y muere cada individuo, y quiénes son sus padres y su cónyuge. Con estos datos, podemos reconstruir redes de parentesco extensas para cada individuo, incluso parientes lejanos que son difíciles de captar en un censo o una encuesta. En este taller, mostraremos un ejemplo de cómo han cambiado las tasas de **pérdida parientes** a lo largo del tiempo. Este enfoque complementa los modelos analíticos de los módulos 2 y 3. Sin embargo, hay muchas más formas de utilizar SOCSIM para estudiar estas y otras cuestiones sobre las dinámicas de parentesco.
 
 ```{r m6-libs, message=FALSE}
 library(rsocsim)
@@ -20,7 +14,13 @@ library(data.table)
 Cargamos los resultados de la simulación del Módulo 5:
 
 ```{r m6-load}
-sim <- readRDS("data/socsim_resultados.rds")
+archivo_sim <- "data/socsim_resultados.rds"
+
+if (!file.exists(archivo_sim)) {
+  stop("Ejecuta primero el Módulo 5: es el que genera ", archivo_sim, ".")
+}
+
+sim <- readRDS(archivo_sim)
 opop <- sim$opop
 omar <- sim$omar
 ```
@@ -58,11 +58,11 @@ opop <- opop %>%
 
 #### 6.2 Una función para estimar la pérdida de parientes {#m6-funcion}
 
-Como grupo de referencia usamos a las **mujeres de 25 a 39 años vivas en un año
-dado** (la muestra cambia cada año). La función `getKinLoss()` identifica a esas
-mujeres, recupera a sus parientes con `rsocsim::retrieve_kin()` y calcula, para
-cada tipo de pariente, qué proporción de la muestra perdió a un familiar ese año
-y qué proporción tenía un familiar vivo el año anterior.
+Para identificar a los parientes en SOCSIM, utilizamos relaciones de parentesco por consanguinidad directa -como padres e hijos- y afinidad -como cónyuges-. Este es el principio en el que se basa la función `retrieve_kin()` incluida en `rsocsim` que puede utilizarse para identificar parientes de diversos tipos (padres, hijos, abuelos, hermanos, cónyuges, y mucho más). Puedes leer la documentación completa de esta función escribiendo `?retrieve_kin` en la consola. 
+
+Además de permitirnos identificar más fácilmente las redes de parentesco, SOCSIM también nos proporciona información valiosa sobre la cronología de los eventos vitales, como nacimientos, muertes y matrimonios, en estas redes. Esto puede ayudarnos a relacionar los cambios en las tasas demográficas con los cambios en las redes de parentesco disponibles para nuestros individuos simulados, a menudo a un nivel temporal muy preciso (meses o años)
+
+En este ejercicio, usamos como grupo de referencia a las **mujeres de 25 a 39 años que están vivas en un año determinado** (la muestra cambia cada año). La función `getKinLoss()` identifica a esas mujeres, recupera a sus parientes con `rsocsim::retrieve_kin()` y calcula, para cada tipo de pariente, qué proporción de la muestra perdió a un familiar ese año y qué proporción tenía un familiar vivo el año anterior. El código es una versión simplificada de las funciones utilizadas en un trabajo de investigación anterior [@snyder_estimates_2022]. 
 
 ```{r m6-getkinloss}
 getKinLoss <- function(year_of_interest, opop, omar) {
@@ -106,13 +106,9 @@ getKinLoss <- function(year_of_interest, opop, omar) {
 
 #### 6.3 Estimar la pérdida a lo largo del tiempo {#m6-estimar}
 
-Ejecutamos la función en intervalos de 10 años entre 1950 y 2020. (Como el paso
-de recuperación de parientes es lento, lo calculamos una vez y guardamos el
-resultado.)
+Ejecutamos la función para recuperar partientes en intervalos de 10 años entre 1950 y 2020, y guardamos el resultado.
 
 ```{r m6-run-shown, eval=FALSE}
-# Estimar la pérdida de parientes cada 10 años entre 1950 y 2020 y guardarla
-# (el paso de recuperación de parientes es lento; se corre una sola vez).
 kinloss_data <- bind_rows(lapply(
   seq(1950, 2020, by = 10),
   function(y) getKinLoss(year_of_interest = y, opop = opop, omar = omar)

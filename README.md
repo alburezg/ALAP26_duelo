@@ -10,36 +10,50 @@ Materiales del taller de la Escuela de la Asociación Latinoamericana de Poblaci
 (Instituto Max Planck de Investigación Demográfica; Centro de Estudios
 Demográficos, Barcelona).
 
-El sitio web del curso se genera a partir de `index.Rmd`, que reúne un módulo por
-pestaña (`modulo_1.Rmd` … `modulo_6.Rmd`) mediante documentos hijos (*child
-documents*). Para compilarlo:
+## Empieza aquí
+
+- **Solo ver el material:** abre `index.html` en tu navegador. Contiene todo el
+  taller (una pestaña por módulo) y no necesitas instalar nada.
+- **Reconstruir el sitio:** desde la raíz del repositorio, ejecuta en R:
 
 ```r
 rmarkdown::render("index.Rmd")
 ```
 
+`index.Rmd` es el documento maestro: reúne los módulos (`modulo_1.Rmd` …
+`modulo_6.Rmd`) como documentos hijos (*child documents*). Los `.Rmd` viven en la
+raíz para que puedas abrir cualquier módulo y ejecutar sus bloques directamente,
+sin cambiar el directorio de trabajo.
+
 ## Estructura
 
-| Archivo | Contenido |
+| Ruta | Contenido |
 |---|---|
-| `index.Rmd` | Documento maestro (pestañas por módulo) |
+| `index.Rmd` | Documento maestro (arma el sitio con una pestaña por módulo) |
+| `index.html` | Sitio compilado (ábrelo para ver el taller sin instalar nada) |
 | `modulo_1.Rmd` | Introducción a la demografía del parentesco + laboratorio de preparación técnica |
 | `modulo_2.Rmd` | Laboratorio: estimación de parentesco con DemoKin (modelo de dos sexos variable en el tiempo, enfoque por período) |
 | `modulo_3.Rmd` | Demografía del duelo + laboratorio: conflicto colombiano (cuatro medidas clave) |
 | `modulo_4.Rmd` | Laboratorio de ejercicios: replicar el análisis para otro país |
 | `modulo_5.Rmd`, `modulo_6.Rmd` | Microsimulación con SOCSIM (`rsocsim`): correr una simulación y estimar la pérdida de parientes |
 | `soluciones.Rmd` | Solución completa del ejercicio del Módulo 4, resuelta para Costa Rica |
+| `datos.Rmd` | Documentación de los datos de entrada del taller |
 | `data/` | Datos de entrada del taller (véase la pestaña **Datos** del sitio) |
+| `img/` | Imágenes usadas en los módulos |
+| `assets/` | Hoja de estilos (`styles.css`) y bibliografía (`kinship.bib`) |
+| `socsim/` | Configuración de SOCSIM (`socsim_Colombia.sup`); la simulación escribe aquí sus salidas |
+| `diapositivas/` | Diapositivas del Módulo 1 (`modulo_1.pdf`) |
 
 ## Datos
 
-- `data/wpp_latam_1950_2023.zip` — insumos del World Population Prospects 2024
-  (mortalidad, fecundidad, población) para ~25 países de América Latina y el
-  Caribe, 1950–2023. Un archivo `.parquet` por país.
-- `data/countries.csv` — lista de países incluidos.
-- `data/homicide_mortality_rates.csv` — tasas de mortalidad por homicidio por país
-  (Módulo 4). **Marcador de posición** (por ahora, mortalidad por todas las
-  causas); se reemplazará por el archivo real conservando el mismo esquema.
+- `data/wpp_latam_1950_2023/` — insumos del World Population Prospects 2024
+  (mortalidad, fecundidad, población) para 20 países de América Latina y el
+  Caribe, 1950–2023. Un archivo `.parquet` por país (`wpp_<ISO3>.parquet`). Son
+  los mismos 20 países con datos de homicidio (véase abajo).
+- `data/countries.csv` — lista de los 20 países incluidos (`iso3`, `country`).
+- `data/homicide_mortality_rates.csv` — tasas de mortalidad por homicidio por país,
+  año, sexo y edad (Módulo 4). Calculadas a partir de estimaciones del *Global
+  Burden of Disease* 2023 para 20 países de la región (2000–2023).
 - `data/colombia/` — datos de entrada del artículo del conflicto colombiano
   (Acosta et al. 2026): tasas demográficas (`col_demo_1950_2018.parquet`),
   muertes por homicidio (`col_homicidios_1985_2018.parquet`), inmigrantes y
@@ -58,8 +72,8 @@ versionadas por su tamaño, son de uso interno de los docentes y no se distribuy
 
 ## Requisitos
 
-R (≥ 4.2), RStudio y los paquetes `tidyverse`, `arrow`,
-[`DemoKin`](https://github.com/IvanWilli/DemoKin) y
+R (≥ 4.2), RStudio y los paquetes `tidyverse`, `arrow`, `scales`, `ggh4x`,
+`data.table`, [`DemoKin`](https://github.com/IvanWilli/DemoKin) y
 [`rsocsim`](https://cran.r-project.org/package=rsocsim). La instalación se cubre
 en el Módulo 1.
 
