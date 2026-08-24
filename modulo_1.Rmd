@@ -17,21 +17,26 @@ las sesiones.
 
 | Horario | Sesión |
 |---|---|
-| 8:30–10:00 | **Módulo 1** · Introducción a la demografía del parentesco + preparación técnica |
-| 10:00–10:30 | Receso |
-| 10:30–12:00 | **Módulo 2** · Estimación de parentesco con DemoKin |
+| 8:30–9:00 | Bienvenida · Presentación cultural |
+| 9:00–10:30 | **Módulo 1** · Introducción a la demografía del parentesco + preparación técnica |
+| 10:30–11:00 | Merienda |
+| 11:00–12:00 | **Módulo 2** · Estimación de parentesco con DemoKin |
 | 12:00–13:00 | Almuerzo |
-| 13:00–14:30 | **Módulo 3** · Demografía del duelo: el conflicto colombiano |
-| 14:30–15:00 | Receso |
-| 15:00–16:30 | **Módulo 4** · Ejercicios: replicar el análisis para otro país |
+| 13:00–15:00 | **Módulo 3** · Demografía del duelo: el conflicto colombiano |
+| 15:00–15:30 | Pausa para café |
+| 15:30–16:30 | **Módulo 4** · Ejercicios: replicar el análisis para otro país |
+| 17:00 | Salida del bus · Regreso al alojamiento |
 
 **Martes 25 de agosto**
 
 | Horario | Sesión |
 |---|---|
 | 8:30–10:00 | **Módulo 5** · Microsimulación con SOCSIM |
-| 10:00–10:30 | Receso |
+| 10:00–10:30 | Merienda |
 | 10:30–12:00 | **Módulo 6** · Pérdida de parientes y conclusiones |
+| 12:00–12:30 | Cierre de las Escuelas ALAP · Comparsa |
+| 12:30 | Almuerzo |
+| 15:00 | Salida del bus · Regreso a San José |
 
 Las pestañas **Soluciones** y **Datos** son material de referencia para consultar
 en cualquier momento.

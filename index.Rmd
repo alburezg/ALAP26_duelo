@@ -12,6 +12,8 @@ output:
     theme: readable
     highlight: pygments
     css: assets/styles.css
+    includes:
+      after_body: assets/copy-code.html
 bibliography: assets/kinship.bib
 link-citations: true
 ---

@@ -1,0 +1,121 @@
+<!-- Botones para copiar el código de los bloques de R -->
+<style>
+div.sourceCode {
+  position: relative;
+}
+
+.btn-copiar-codigo {
+  position: absolute;
+  top: 0.4em;
+  right: 0.4em;
+  padding: 0.15em 0.6em;
+  font-family: inherit;
+  font-size: 0.75em;
+  line-height: 1.6;
+  color: #355070;
+  background: #fff;
+  border: 1px solid #c7d2e0;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+
+div.sourceCode:hover .btn-copiar-codigo,
+.btn-copiar-codigo:focus {
+  opacity: 1;
+}
+
+.btn-copiar-codigo:hover {
+  background: #f4f7fb;
+}
+
+.btn-copiar-codigo.copiado {
+  color: #2e7d32;
+  border-color: #2e7d32;
+}
+
+@media print {
+  .btn-copiar-codigo { display: none; }
+}
+</style>
+
+<script>
+(function () {
+  "use strict";
+
+  // Copia al portapapeles. Usa la API moderna cuando hay contexto seguro
+  // (https o localhost) y recurre a execCommand si el archivo se abre con file://
+  function copiarAlPortapapeles(texto) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(texto);
+    }
+    return new Promise(function (resolver, rechazar) {
+      var area = document.createElement("textarea");
+      area.value = texto;
+      area.setAttribute("readonly", "");
+      area.style.position = "fixed";
+      area.style.top = "-1000px";
+      area.style.opacity = "0";
+      document.body.appendChild(area);
+      area.select();
+      var exito = false;
+      try {
+        exito = document.execCommand("copy");
+      } catch (e) {
+        exito = false;
+      }
+      document.body.removeChild(area);
+      if (exito) { resolver(); } else { rechazar(); }
+    });
+  }
+
+  function crearBoton(codigo) {
+    var boton = document.createElement("button");
+    boton.type = "button";
+    boton.className = "btn-copiar-codigo";
+    boton.textContent = "Copiar";
+    boton.title = "Copiar el código al portapapeles";
+    boton.setAttribute("aria-label", "Copiar el código al portapapeles");
+
+    boton.addEventListener("click", function () {
+      function restablecer() {
+        window.setTimeout(function () {
+          boton.textContent = "Copiar";
+          boton.classList.remove("copiado");
+        }, 1500);
+      }
+      copiarAlPortapapeles(codigo.textContent).then(
+        function () {
+          boton.textContent = "¡Copiado!";
+          boton.classList.add("copiado");
+          restablecer();
+        },
+        function () {
+          boton.textContent = "Error";
+          restablecer();
+        }
+      );
+    });
+
+    return boton;
+  }
+
+  function agregarBotones() {
+    var bloques = document.querySelectorAll("div.sourceCode");
+    for (var i = 0; i < bloques.length; i++) {
+      var bloque = bloques[i];
+      if (bloque.querySelector(".btn-copiar-codigo")) { continue; }
+      var codigo = bloque.querySelector("code");
+      if (!codigo) { continue; }
+      bloque.appendChild(crearBoton(codigo));
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", agregarBotones);
+  } else {
+    agregarBotones();
+  }
+})();
+</script>
