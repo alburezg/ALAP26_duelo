@@ -65,11 +65,14 @@ data/socsim_*.rds
 *.omor
 *.log
 
-# --- Diapositivas (beamer): versionar SOLO el PDF compilado; ignorar la fuente
+# --- Diapositivas: versionar SOLO las presentaciones finales (.pdf, .pptx) para
+#     que quienes clonen el repositorio las reciban completas; ignorar la fuente
 #     (.tex, refs.bib), las figuras (figures/, figures_src/) y todos los
 #     archivos intermedios de LaTeX ---
 diapositivas/*
-!diapositivas/modulo_1.pdf
+!diapositivas/*.pdf
+!diapositivas/*.pptx
+!diapositivas/*.ppt
 
 # --- Sistema ---
 .DS_Store
