@@ -367,8 +367,9 @@ pariente, con el número esperado de parientes vivos (`living`). La columna
 `sex_kin = "m"` son los **hijos** de Focal; `kin = "m"`, `sex_kin = "m"` es el
 **padre**, etc.
 
-```{r m2-glimpse}
-glimpse(kin)
+```{r m2-estructura}
+dim(kin) # filas y columnas
+head(kin)
 ```
 
 Para poner los resultados en español definimos una pequeña función que traduce

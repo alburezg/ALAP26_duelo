@@ -30,6 +30,33 @@ h1, h2, h3 {
   color: #355070;
 }
 
+/* Numeración de los bloques de código (para referirse a ellos en el taller) */
+.bloque-codigo {
+  margin: 1em 0;
+}
+
+.num-bloque {
+  display: inline-block;
+  font-family: monospace;
+  font-size: 0.8em;
+  font-weight: bold;
+  color: #355070;
+  background: #eef2f8;
+  border: 1px solid #c7d2e0;
+  border-radius: 4px;
+  padding: 0.05em 0.45em;
+  margin-bottom: 0.25em;
+  user-select: none;
+}
+
+.bloque-codigo pre {
+  margin-top: 0;
+}
+
+@media print {
+  .num-bloque { border: none; background: none; }
+}
+
 /* Recuadro para enunciados de ejercicios */
 .ejercicio {
   background: #fdf3ec;

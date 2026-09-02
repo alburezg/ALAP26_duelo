@@ -29,6 +29,48 @@ knitr::opts_chunk$set(
 )
 # Evitar notación científica en los resultados
 options(scipen = 999999)
+
+# --- Numeración de los bloques de código ---------------------------------
+# Numera cada bloque VISIBLE con la forma [modulo.n] (p. ej. [3.7]) para poder
+# referirse a un bloque en voz alta durante el laboratorio. Solo se cuentan los
+# bloques que el lector ve: los que tienen echo=FALSE o include=FALSE no gastan
+# número, para que la secuencia visible no salte.
+local({
+  contador <- 0L
+  modulo_actual <- ""
+
+  hook_original <- knitr::knit_hooks$get("source")
+
+  knitr::knit_hooks$set(source = function(x, options) {
+    codigo <- hook_original(x, options)
+
+    # El prefijo de la etiqueta indica el módulo: "m3-qx" -> "3", "sol-p0" -> "S"
+    etiqueta <- as.character(options$label)
+    modulo <- sub("^m([0-9]+)-.*$", "\\1", etiqueta)
+    if (identical(modulo, etiqueta)) {
+      modulo <- if (grepl("^sol-", etiqueta)) "S" else ""
+    }
+
+    # Reiniciar la cuenta al empezar un módulo nuevo
+    if (!identical(modulo, modulo_actual)) {
+      modulo_actual <<- modulo
+      contador <<- 0L
+    }
+    contador <<- contador + 1L
+
+    if (identical(modulo, "")) {
+      return(codigo)
+    }
+
+    # La etiqueta va FUERA del <code>, para que el botón "Copiar" no la incluya.
+    paste0(
+      '<div class="bloque-codigo">',
+      '<span class="num-bloque">[', modulo, ".", contador, "]</span>\n",
+      codigo,
+      "\n</div>"
+    )
+  })
+})
 ```
 
 Bienvenidas y bienvenidos al taller **Demografía del parentesco con énfasis en

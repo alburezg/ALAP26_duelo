@@ -8,6 +8,8 @@
 # (dependen de rutas locales) y NO se versionan.
 # =============================================================================
 
+todo.txt
+
 # --- R / RStudio ---
 .Rproj.user
 .Rhistory

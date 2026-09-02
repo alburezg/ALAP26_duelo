@@ -14,14 +14,36 @@ El flujo de trabajo es el mismo del Módulo 3, con dos cambios:
 2. La mortalidad de referencia son **tasas específicas por homicidio** del país
    elegido.
 
-> **Datos de mortalidad por homicidio.** Estas tasas por homicidio fueron 
-> calculadas a partir de estimaciones de la Global Burden of Disease 2023 para 
-> 20 países de la región..
+> **Datos de mortalidad por homicidio.** Estas tasas por homicidio fueron
+> calculadas a partir de estimaciones de la Global Burden of Disease 2023 para
+> 20 países de la región.
 
 ```{r m4-libs, message=FALSE}
 library(tidyverse)
 library(DemoKin)
 library(arrow)
+```
+
+> **Importante: este módulo arranca de cero.** Todo el sitio se compila en **una
+> sola sesión de R**, así que los objetos del Módulo 3 (que son de **Colombia**)
+> siguen en la memoria cuando llegamos aquí. Si reutiliza uno de ellos sin
+> darse cuenta, el código correrá sin error pero le dará resultados de Colombia.
+> Para evitarlo, empezamos borrándolos: así, reutilizar uno por accidente da un
+> error claro en vez de un resultado equivocado.
+
+```{r m4-limpiar}
+# Borramos los objetos de Colombia del Módulo 3. intersect() con ls() hace que
+# el bloque funcione igual si corre este módulo por separado (no habrá nada que
+# borrar y no dará error).
+objetos_modulo_3 <- c(
+  "demo", "pop", "homicidios", "inmigrantes", "kin", "qx_kin",
+  "p0_anual", "p0_acum", "pop_focal", "exposicion_2018", "poblacion_2018",
+  "pop_2018", "muertes_total", "etiquetas_kin", "parientes_cercanos",
+  "parientes_extendidos", "incidencia_familia_anual", "incidencia_grupo",
+  "en_duelo_prev", "p0_grupo", "archivo_kin", "dcol"
+)
+
+rm(list = intersect(objetos_modulo_3, ls()))
 ```
 
 **Contenido de este módulo:**
@@ -37,20 +59,66 @@ Elegimos un país mediante su código ISO3 (véase `data/countries.csv`). Aquí
 usamos **Costa Rica** (`CRI`) como ejemplo —el mismo país que se resuelve paso a
 paso en la pestaña **Soluciones**—; cambie el código por el país que prefiera.
 
+Las **tres primeras líneas** del bloque son los únicos parámetros del análisis:
+el país y el rango de años. Todo lo que sigue se calcula a partir de ellos, así
+que para cambiar de país o de año de referencia basta con editarlas (no hay
+años escritos «a mano» más abajo).
+
 ```{r m4-load}
-iso <- "CRI" # <-- cambie aquí su país
+# --- Parámetros del análisis: lo único que hay que cambiar ---
+iso <- "CRI" # <-- cambie aquí su país (código ISO3)
+anio_inicial <- 2000 # primer año con datos de homicidio (GBD)
+anio_final <- 2023 # año de referencia del análisis (último disponible)
+
+# Datos del WPP para el país elegido (supervivencia px, fecundidad fx, población)
 pais <- open_dataset("data/wpp_latam_1950_2023/", format = "parquet") |>
   filter(iso3 == iso) |>
-  collect() |> 
+  collect() |>
   as_tibble()
 
-pais
-glimpse(pais)
+dim(pais) # filas y columnas
+head(pais)
 ```
 
-Reutilizamos la función del Módulo 2 para construir las matrices (edad × año):
+Con los datos del país preparamos la **población de Focal** (para la incidencia
+anual, que necesita todos los años) y la **exposición** en el año de referencia
+(para la prevalencia, que es una foto de un solo año):
+
+```{r m4-poblacion}
+# Población de Focal por año, sexo y edad: el denominador de la incidencia anual.
+pop_focal <- pais %>% transmute(year, sex_focal = sex, age_focal = age, pop)
+
+# Exposición en el año de referencia: la población que puede estar en duelo.
+# (A diferencia del Módulo 3, aquí no descontamos inmigrantes: no tenemos ese
+# dato para todos los países.)
+exposicion <- pais %>%
+  filter(year == anio_final) %>%
+  transmute(sex_focal = sex, age_focal = age, exposicion = pop)
+
+# Población total del país en el año de referencia.
+poblacion <- sum(exposicion$exposicion)
+
+# Etiquetas de los tipos de pariente y los dos grupos de familia.
+etiquetas_kin <- c(
+  d = "Hijas e hijos", m = "Madres y padres", s = "Hermanas y hermanos",
+  gm = "Abuelas y abuelos", gd = "Nietas y nietos", a = "Tías y tíos",
+  n = "Sobrinas y sobrinos", c = "Primas y primos"
+)
+parientes_cercanos <- c("d", "m", "s")
+parientes_extendidos <- c("gm", "gd", "a", "n", "c")
+
+poblacion
+```
+
+Construimos las matrices (edad × año) que pide `kin2sex()`. La función es la
+misma que vimos en el Módulo 2; la definimos otra vez aquí para que este módulo
+funcione por sí solo:
 
 ```{r m4-reshape}
+# reshape_wpp(): toma los datos largos del WPP y devuelve UNA matriz con las
+# edades en las filas y los años en las columnas, que es el formato que espera
+# DemoKin. Argumentos: dat = los datos del país; variable = la columna que
+# queremos ("px", "fx" o "pop"); which_sex = "f" o "m".
 reshape_wpp <- function(dat, variable, which_sex) {
   dat %>%
     filter(sex == which_sex) %>%
@@ -76,13 +144,13 @@ por homicidio** del conflicto colombiano. Para el ejercicio usamos un archivo de
 **tasas de mortalidad por homicidio** por país, año, sexo y edad:
 `data/homicide_mortality_rates.csv` (columnas `iso3`, `year`, `sex`, `age`, `mx`).
 
-
-Leemos el archivo, lo filtramos para el país elegido y convertimos la tasa `mx`
-en probabilidad `qx`:
+Leemos el archivo, lo filtramos para el país y los años elegidos, y convertimos
+la tasa `mx` en probabilidad `qx` (suponiendo `ax = 0.5`, es decir, que las
+muertes se reparten de forma uniforme dentro del año):
 
 ```{r m4-mort}
 qx_kin <- read_csv("data/homicide_mortality_rates.csv", show_col_types = FALSE) %>%
-  filter(iso3 == iso) %>%
+  filter(iso3 == iso, year %in% anio_inicial:anio_final) %>%
   mutate(qx = mx / (1 + 0.5 * mx)) %>%
   transmute(year, sex_kin = sex, age_kin = age, qx_kin = qx)
 
@@ -97,46 +165,87 @@ Módulo 2, lo corremos **para Focal mujer** y **copiamos** el resultado para Foc
 hombre (por eficiencia; normalmente correríamos `kin2sex()` de nuevo con
 `sex_focal = "m"`).
 
-> **Atención:** este paso tarda **varios minutos**. El siguiente bloque se muestra
-> pero **no se ejecuta** al compilar el sitio; córralo usted en su análisis y
-> guarde el resultado (por ejemplo con `write_parquet()`) para no repetirlo.
+> **Atención: este paso tarda varios minutos.** Por eso lo calculamos **una sola
+> vez**, guardamos el resultado en `data/` y lo reutilizamos en adelante (esto se
+> llama *caché*). La primera vez que corra el bloque tendrá que esperar; después
+> será instantáneo. Si cambia de país o de años, el nombre del archivo cambia
+> también, así que el modelo se vuelve a correr solo cuando hace falta.
 
-```{r m4-kin, eval=FALSE}
-# Correr el modelo para Focal mujer y copiarlo para Focal hombre.
-kin_f <- kin2sex(
-  pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
-  time_invariant = FALSE,
-  output_kin = c("d", "m", "s", "gm", "gd", "a", "n", "c"),
-  sex_focal = "f",
-  birth_female = 0.5
+```{r m4-kin}
+# El nombre del archivo incluye el país y los años: así, si cambia cualquiera de
+# los parámetros, no se reutiliza por error un resultado viejo.
+archivo_kin <- file.path(
+  "data", paste0("kin_", iso, "_", anio_inicial, "_", anio_final, ".parquet")
 )
 
-kin <- bind_rows(
-  as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "f"),
-  as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "m")
-) %>%
-  transmute(year, sex_focal, age_focal, kin, sex_kin, age_kin, living) %>%
-  filter(living > 0)
+if (!file.exists(archivo_kin)) {
+  # Corremos el modelo para Focal MUJER y copiamos el resultado para Focal
+  # hombre. Es un atajo por eficiencia: normalmente correríamos kin2sex() otra
+  # vez con sex_focal = "m". Acotamos la salida con output_period a los años que
+  # tienen datos de homicidio, para no calcular años que no vamos a usar.
+  kin_f <- kin2sex(
+    pf = pf, pm = pm, ff = ff, fm = fm, nf = nf, nm = nm,
+    time_invariant = FALSE,
+    output_period = anio_inicial:anio_final,
+    output_kin = c("d", "m", "s", "gm", "gd", "a", "n", "c"),
+    sex_focal = "f",
+    birth_female = 0.5
+  )
+
+  kin <- bind_rows(
+    as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "f"),
+    as_tibble(kin_f$kin_full) %>% mutate(sex_focal = "m")
+  ) %>%
+    transmute(year, sex_focal, age_focal, kin, sex_kin, age_kin, living) %>%
+    filter(living >= 1e-6)
+
+  write_parquet(kin, archivo_kin)
+}
+
+kin <- read_parquet(archivo_kin)
+
+dim(kin) # filas y columnas
+head(kin)
 ```
 
 #### 4.4 Ejercicio: replicar las cuatro medidas {#m4-ejercicio}
 
 <div class="ejercicio">
 
-**Su tarea.** Con la estructura de parentesco (`kin`), la mortalidad de
-referencia (`qx_kin`) y la población (`pais`), reproduzca para su país las
-**cuatro medidas** del Módulo 3:
+**Su tarea.** Reproduzca para su país las **cuatro medidas** del Módulo 3:
 
 1. **Incidencia anual** del duelo (personas en duelo por año y tipo de pariente).
 2. **Multiplicadores de duelo** (personas en duelo por muerte).
-3. **Prevalencia acumulada** en el último año disponible (% de la población que
-   ha perdido al menos un pariente).
+3. **Prevalencia acumulada** en el año de referencia (% de la población que ha
+   perdido al menos un pariente).
 4. **Distribución por edad** de la prevalencia (pirámide poblacional coloreada
    por familia cercana / extendida / ambas).
 
-Puede reutilizar directamente el código del Módulo 3, adaptando los nombres de
-los objetos. Si se atasca, en la pestaña **Soluciones** (al final) encontrará el
-código completo y comentado del ejercicio, resuelto paso a paso para Costa Rica.
+**Ya tiene todo lo que necesita.** Los bloques anteriores dejaron listos estos
+objetos, todos referidos a **su** país:
+
+| Objeto | Qué contiene |
+|---|---|
+| `kin` | Estructura de parentesco: parientes vivos por año, sexo y edad de Focal |
+| `qx_kin` | Probabilidad de morir por homicidio, por año, sexo y edad del pariente |
+| `pop_focal` | Población de Focal por año, sexo y edad (denominador de la incidencia) |
+| `exposicion` | Población por sexo y edad en el año de referencia (para la prevalencia) |
+| `poblacion` | Población total en el año de referencia (un solo número) |
+| `anio_inicial`, `anio_final` | Rango de años del análisis |
+| `etiquetas_kin` | Nombres legibles de los tipos de pariente |
+| `parientes_cercanos`, `parientes_extendidos` | Los dos grupos de familia |
+
+> **Cuidado con los nombres.** Puede reutilizar el código del Módulo 3, pero
+> **adapte los nombres de los objetos**: el Módulo 3 usa `exposicion_2018`,
+> `poblacion_2018` y `pop_2018`, que aquí se llaman `exposicion` y `poblacion`
+> (sin el año, porque el año es un parámetro). Ese código también usa
+> `filter(year == 2018)`; en su análisis debe ser `filter(year == anio_final)`.
+> Y recuerde que necesitará el **total de muertes** del período como denominador
+> del multiplicador: en el Módulo 3 era `muertes_total`, calculado a partir de
+> conteos de muertes; aquí tendrá que obtenerlo de las tasas `mx` y la población.
+
+Si se atasca, en la pestaña **Soluciones** (al final) encontrará el código
+completo y comentado del ejercicio, resuelto paso a paso para Costa Rica.
 
 </div>
 

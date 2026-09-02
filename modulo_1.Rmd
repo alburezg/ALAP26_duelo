@@ -85,11 +85,14 @@ install.packages("rsocsim")
 #   tidyverse, arrow  -> manipulación de datos y lectura de .parquet
 #   scales            -> formato de ejes y etiquetas (Módulo 3)
 #   ggh4x, data.table -> facetas y manejo de datos de la microsimulación (5-6)
-install.packages(c("tidyverse", "arrow", "scales", "ggh4x", "data.table"))
+#   future            -> rsocsim lo usa para correr la simulación en segundo
+#                        plano (Módulo 5). Hay que instalarlo aparte: rsocsim
+#                        lo declara como sugerido, no como dependencia.
+install.packages(c("tidyverse", "arrow", "scales", "ggh4x", "data.table", "future"))
 ```
 `rsocsim` tiene una simulación sencilla incorporada que puedes ejecutar para ver si el paquete se ha instalado correctamente. Por ahora, vamos a ejecutar el código sin centrarnos en los detalles técnicos:
 
-```{r check_sim}
+```{r m1-check-sim}
 library(rsocsim)
 
 # basedir mantiene la prueba dentro del proyecto (socsim/); si se omite,
@@ -136,7 +139,9 @@ Cada país es un archivo `wpp_<ISO3>.parquet`. Veamos el de Colombia:
 
 ```{r m1-wpp-col}
 col <- read_parquet("data/wpp_latam_1950_2023/wpp_COL.parquet")
-glimpse(col)
+
+dim(col) # filas y columnas
+head(col)
 ```
 
 La tabla está en formato **tidy**: una fila por combinación de `year`, `sex`
@@ -157,7 +162,9 @@ conflicto armado colombiano [@acosta_weaponizing_2026]. Los datos están en
 # Muertes por homicidio relacionadas con el conflicto (1985-2018),
 # por año, sexo y edad de la víctima
 homicidios <- read_parquet("data/colombia/col_homicidios_1985_2018.parquet")
-glimpse(homicidios)
+
+dim(homicidios) # filas y columnas
+head(homicidios)
 
 # Total de homicidios del conflicto en el período, sumando sobre edad y sexo.
 # Es el denominador de los multiplicadores de duelo del Módulo 3.

@@ -16,6 +16,7 @@ library(tidyverse)
 library(ggh4x) # facetas con escalas independientes
 library(data.table)
 library(arrow)
+library(future) # rsocsim lo usa para correr la simulación en segundo plano
 ```
 
 **Contenido de este módulo:**
@@ -255,7 +256,12 @@ folder <- file.path(getwd(), "socsim")
 supfile <- "socsim_Colombia.sup"
 seed <- "250826"
 
-# Correr la microsimulación y leer sus archivos de salida (población y matrimonios)
+# Correr la microsimulación y leer sus archivos de salida (población y matrimonios).
+# Ojo: el "future" de process_method es el NOMBRE DEL MÉTODO con que rsocsim
+# corre la simulación en segundo plano (y así puede mostrar el avance mientras
+# corre), no el nombre de un argumento de paquete. Eso sí: para que ese método
+# funcione hace falta tener instalado el paquete `future` (Módulo 1), porque
+# rsocsim lo declara como sugerido y no se instala solo.
 rsocsim::socsim(folder, supfile, seed, process_method = "future")
 opop <- rsocsim::read_opop(folder = folder, supfile = supfile, seed = seed, suffix = "", fn = NULL)
 omar <- rsocsim::read_omar(folder = folder, supfile = supfile, seed = seed, suffix = "", fn = NULL)
@@ -291,7 +297,7 @@ head(opop)
 
 El archivo de matrimonios (`.omar`) contiene un registro por cada matrimonio ocurrido durante la simulación. Cada registro de matrimonio proporciona la siguiente información: número identificador del matrimonio (`mid`), identificador de persona de la esposa (`wpid`), identificador de persona del esposo (`hpid`), fecha de inicio del matrimonio (`dstart`), fecha de finalización del matrimonio (`dend`, es 0 si estaba vigente al final de la simulación), razón por la que finalizó el matrimonio (`rend`), identificador del siguiente matrimonio anterior más reciente de la esposa (`wprior`), identificador del siguiente matrimonio anterior más reciente del esposo (`hprior`).
 
-```{r omar}
+```{r m5-omar}
 head(omar)
 ```
 
@@ -406,9 +412,9 @@ SocsimM <- asmr_sim %>%
 
 Finalmente, podemos graficar las tasas de fecundidad y mortalidad por edad para mujeres en Colombia obtenidas de los resultados SOCSIM y de WPP.
 
-```{r}
+```{r m5-plot-compare}
 
-bind_rows(WPP_fert, SocsimF, WPP_mort, SocsimM) %>% 
+bind_rows(WPP_fert, SocsimF, WPP_mort, SocsimM) %>%
   filter(Estimate != 0 & !is.infinite(Estimate) & !is.nan(Estimate)) %>% 
   mutate(age = factor(as.character(age), levels = age_levels)) %>%
   filter(year %in% yrs_plot) %>% 

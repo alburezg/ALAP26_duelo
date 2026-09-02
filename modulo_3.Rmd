@@ -80,6 +80,11 @@ archivo_kin <- file.path(dcol, "col_kin_1985_2018.parquet")
 if (!file.exists(archivo_kin)) {
   # Reconstruir el archivo (normalmente ya lo generó el Módulo 2).
   col <- read_parquet("data/wpp_latam_1950_2023/wpp_COL.parquet")
+
+  # reshape_wpp(): toma los datos largos del WPP y devuelve UNA matriz con las
+  # edades en las filas y los años en las columnas (el formato que espera
+  # DemoKin). Argumentos: dat = los datos; variable = la columna que queremos
+  # ("px", "fx" o "pop"); which_sex = "f" o "m".
   reshape_wpp <- function(dat, variable, which_sex) {
     dat %>%
       filter(sex == which_sex) %>%
@@ -115,8 +120,9 @@ if (!file.exists(archivo_kin)) {
 kin <- read_parquet(archivo_kin)
 ```
 
-```{r m3-glimpse}
-glimpse(kin)
+```{r m3-estructura}
+dim(kin) # filas y columnas
+head(kin)
 ```
 
 Definimos etiquetas legibles y los **dos grupos de parentesco** que usa el
@@ -341,6 +347,13 @@ incidencia <- p0_anual %>%
 > combinando a los miembros del grupo con la fórmula de producto vista arriba.
 
 ```{r m3-inc-grupo}
+# incidencia_familia_anual(): cuántas personas quedan en duelo CADA AÑO por un
+# grupo de parientes. Argumentos: tipos = qué parientes forman el grupo
+# (p. ej. c("d","m","s")); etiqueta = el nombre que llevará el grupo en el
+# gráfico. Devuelve una fila por año, con las personas en duelo y la etiqueta.
+# Los pasos son: (1) quedarse con esos parientes, (2) combinarlos con la
+# fórmula de producto (la probabilidad de no perder a NINGUNO), (3) pegar la
+# población de Focal, (4) pasar de probabilidad a personas, (5) sumar por año.
 incidencia_familia_anual <- function(tipos, etiqueta) {
   p0_anual %>%
     filter(kin %in% tipos) %>%
@@ -406,7 +419,10 @@ grupos de arriba) y luego calculamos la incidencia:
 ```{r m3-mult-calc}
 muertes_total <- sum(homicidios$dx) # total de homicidios 1985-2018
 
-# incidencia total (1985-2018) de un grupo de parientes
+# incidencia_grupo(): igual que incidencia_familia_anual(), pero devuelve UN
+# SOLO número: el total de personas en duelo de todo el período (1985-2018), sin
+# separar por año. Es el numerador del multiplicador de duelo.
+# Argumento: tipos = qué parientes forman el grupo.
 incidencia_grupo <- function(tipos) {
   p0_anual %>%
     filter(kin %in% tipos) %>%
@@ -501,6 +517,11 @@ sección de grupos), la convierte en probabilidad de pérdida y la multiplica po
 la exposición:
 
 ```{r m3-cum-helper}
+# en_duelo_prev(): cuántas personas VIVAS en 2018 han perdido al menos un
+# pariente de un grupo en algún momento. A diferencia de las funciones
+# anteriores, parte de p0_acum (probabilidades ACUMULADAS a lo largo de la vida)
+# y usa la exposición de 2018, no la población de cada año.
+# Argumento: tipos = qué parientes forman el grupo. Devuelve un solo número.
 en_duelo_prev <- function(tipos) {
   p0_acum %>%
     filter(kin %in% tipos) %>%
@@ -612,7 +633,11 @@ pop_2018 <- pop %>%
   filter(year == 2018) %>%
   transmute(sex_focal = sex, age_focal = age, pop)
 
-# p0 acumulado de cada grupo, por edad y sexo (producto sobre los miembros)
+# p0_grupo(): probabilidad acumulada de NO haber perdido a ningún pariente del
+# grupo, por sexo y edad de Focal (combinando a los miembros con el producto).
+# A diferencia de en_duelo_prev(), no multiplica por la población: devuelve la
+# probabilidad, que es lo que necesitamos para la pirámide.
+# Argumento: tipos = qué parientes forman el grupo.
 p0_grupo <- function(tipos) {
   p0_acum %>%
     filter(kin %in% tipos) %>%

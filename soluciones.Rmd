@@ -69,6 +69,10 @@ copiamos el resultado para Focal hombre (por eficiencia, como en el Módulo 2).
 Tarda unos minutos; lo calculamos una vez, lo guardamos y lo reutilizamos (caché).
 
 ```{r sol-kin}
+# reshape_wpp(): toma los datos largos del WPP y devuelve UNA matriz con las
+# edades en las filas y los años en las columnas (el formato que espera
+# DemoKin). Argumentos: dat = los datos del país; variable = la columna que
+# queremos ("px", "fx" o "pop"); which_sex = "f" o "m".
 reshape_wpp <- function(dat, variable, which_sex) {
   dat %>%
     filter(sex == which_sex) %>%
@@ -130,6 +134,10 @@ p0_acum <- p0_anual %>%
 #### S.3 Medida 1: incidencia anual {#sol-incidencia}
 
 ```{r sol-incidencia, fig.height=4.5}
+# incidencia_familia_anual(): cuántas personas quedan en duelo CADA AÑO por un
+# grupo de parientes. Argumentos: tipos = qué parientes forman el grupo
+# (p. ej. c("d","m","s")); etiqueta = el nombre que llevará el grupo en el
+# gráfico. Devuelve una fila por año, con las personas en duelo y la etiqueta.
 incidencia_familia_anual <- function(tipos, etiqueta) {
   p0_anual %>%
     filter(kin %in% tipos) %>%
@@ -168,6 +176,9 @@ muertes_total <- read_csv("data/homicide_mortality_rates.csv", show_col_types = 
   summarise(m = sum(mx * pop, na.rm = TRUE)) %>%
   pull(m)
 
+# incidencia_grupo(): igual que incidencia_familia_anual(), pero devuelve UN
+# SOLO número: el total de personas en duelo de todo el período, sin separar por
+# año. Es el numerador del multiplicador de duelo.
 incidencia_grupo <- function(tipos) {
   p0_anual %>%
     filter(kin %in% tipos) %>%
@@ -206,6 +217,10 @@ bind_rows(mult_kin, mult_grupos) %>%
 #### S.5 Medida 3: prevalencia acumulada {#sol-prevalencia}
 
 ```{r sol-prevalencia, fig.height=5}
+# en_duelo_prev(): cuántas personas VIVAS en el año de referencia han perdido al
+# menos un pariente del grupo en algún momento. Parte de p0_acum
+# (probabilidades ACUMULADAS a lo largo de la vida) y usa la exposición del año
+# de referencia. Devuelve un solo número.
 en_duelo_prev <- function(tipos) {
   p0_acum %>%
     filter(kin %in% tipos) %>%
@@ -270,6 +285,10 @@ pop_final <- pais %>%
   filter(year == anio_final) %>%
   transmute(sex_focal = sex, age_focal = age, pop)
 
+# p0_grupo(): probabilidad acumulada de NO haber perdido a ningún pariente del
+# grupo, por sexo y edad de Focal. A diferencia de en_duelo_prev(), no
+# multiplica por la población: devuelve la probabilidad, que es lo que necesita
+# la pirámide.
 p0_grupo <- function(tipos) {
   p0_acum %>%
     filter(kin %in% tipos) %>%
